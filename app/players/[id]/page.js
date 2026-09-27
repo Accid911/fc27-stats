@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { loadAll, buildModel, playerStats, seasonLabel } from '@/lib/data';
+import { loadAll, buildModel, playerStats, seasonLabel, statusText, formatMoney, STATUS_BADGE, MOVE_LABEL } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import DemoNotice from '@/components/DemoNotice';
 
@@ -14,6 +14,8 @@ export default async function PlayerPage({ params }) {
   if (!player) notFound();
 
   const all = playerStats(model).find((p) => p.id === id);
+  const st = model.statusById[id];
+  const moves = model.moves.filter((mv) => mv.player_id === id).reverse();
   const bySeason = model.seasons
     .map((s) => {
       const st = playerStats(model, model.matches.filter((m) => m.season_id === s.id)).find((p) => p.id === id);
@@ -41,12 +43,11 @@ export default async function PlayerPage({ params }) {
       <DemoNotice demo={data.demo} />
       <div className="eyebrow">
         {player.position || 'Player'}
-        {player.age ? ` · Age ${player.age}` : ''}
         {player.country ? ` · ${player.country}` : ''}
       </div>
       <h1>{player.name}</h1>
       <div className="row" style={{ marginTop: 12 }}>
-        <span className={`badge ${player.is_active ? 'green' : ''}`}>{player.is_active ? 'In squad' : 'Left club'}</span>
+        <span className={`badge ${STATUS_BADGE[st.status]}`}>{statusText(st)}</span>
         {all.hatTricks > 0 && <span className="badge gold">{all.hatTricks} hat-trick{all.hatTricks > 1 ? 's' : ''}</span>}
       </div>
 
@@ -79,6 +80,31 @@ export default async function PlayerPage({ params }) {
           />
         </div>
       </section>
+
+      {moves.length > 0 && (
+        <section className="section">
+          <h2>Transfers &amp; loans</h2>
+          <div className="card pad-0">
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Season</th><th>Date</th><th>What</th><th>Club</th><th className="num">Fee</th><th>Notes</th></tr></thead>
+                <tbody>
+                  {moves.map((mv) => (
+                    <tr key={mv.id}>
+                      <td>{mv.season ? seasonLabel(mv.season) : '—'}</td>
+                      <td className="muted">{mv.moved_on || '—'}</td>
+                      <td style={{ fontWeight: 600 }}>{MOVE_LABEL[mv.type]}</td>
+                      <td>{mv.club || '—'}</td>
+                      <td className="num">{mv.fee != null ? formatMoney(mv.fee, model.currency) : '—'}</td>
+                      <td className="muted" style={{ whiteSpace: 'normal' }}>{mv.notes || ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="section">
         <h2>Match log</h2>

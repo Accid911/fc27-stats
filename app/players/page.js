@@ -1,4 +1,4 @@
-import { loadAll, buildModel, playerStats } from '@/lib/data';
+import { loadAll, buildModel, playerStats, statusText } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import DemoNotice from '@/components/DemoNotice';
 
@@ -11,7 +11,7 @@ export default async function PlayersPage() {
   const rows = playerStats(model).map((p) => ({
     ...p,
     href: `/players/${p.id}`,
-    status: p.is_active ? 'Squad' : 'Left',
+    status: statusText(model.statusById[p.id]),
   }));
 
   return (
@@ -28,7 +28,6 @@ export default async function PlayersPage() {
           columns={[
             { key: 'name', label: 'Player', href: 'href' },
             { key: 'position', label: 'Pos' },
-            { key: 'age', label: 'Age', num: true },
             { key: 'country', label: 'Country' },
             { key: 'status', label: 'Status' },
             { key: 'apps', label: 'Apps', num: true },

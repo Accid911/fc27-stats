@@ -41,9 +41,16 @@ a.link:hover, .link a:hover { text-decoration: underline; }
   backdrop-filter: blur(8px);
   position: sticky; top: 0; z-index: 10;
 }
-.site-header .container { display: flex; align-items: center; gap: 24px; height: 60px; }
+.site-header .container { display: flex; align-items: center; gap: 24px; height: 64px; }
 .brand { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; }
-.brand span { color: var(--accent-ink); background: var(--gold); font-size: 13px; padding: 2px 7px; border-radius: 5px; vertical-align: 3px; margin-left: 4px; letter-spacing: 0.08em; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand svg { flex: none; display: block; }
+.brand-text { display: flex; flex-direction: column; line-height: 1; }
+.brand-text small { font-size: 11px; color: var(--gold); letter-spacing: 0.18em; margin-top: 3px; font-weight: 700; }
+.hero-row { display: flex; align-items: center; gap: 24px; }
+.hero-row .hero-logo { flex: none; margin-left: auto; filter: drop-shadow(0 8px 24px rgba(24, 64, 184, 0.5)); }
+@media (max-width: 600px) { .hero-row .hero-logo { display: none; } }
+.move-form { margin-top: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
 .nav { display: flex; gap: 4px; margin-left: auto; overflow-x: auto; }
 .nav a { padding: 6px 12px; border-radius: 8px; color: var(--muted); font-weight: 500; white-space: nowrap; }
 .nav a:hover { color: var(--text); background: var(--surface-2); }
@@ -142,6 +149,7 @@ th.center, td.center { text-align: center; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
+.chip.on { border-color: var(--accent); color: var(--accent); background: #0e1a3d; }
 .chip.ghost { color: var(--muted); border-style: dashed; }
 .chip-pos { color: var(--muted); font-size: 11px; font-weight: 700; margin-right: 2px; }
 .stepper { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }

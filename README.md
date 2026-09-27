@@ -32,9 +32,11 @@ git push -u origin main
 
 ## Upgrading an existing database
 
-Already set up the database with the first version? Run
-[`supabase/migrations/002-leicester-youth.sql`](supabase/migrations/002-leicester-youth.sql)
-once in **SQL Editor → New query → Run**. It keeps your players, seasons and matches.
+Already have a database? Run the migration files you haven't run yet, in order, in
+**SQL Editor → New query → Run** (each one keeps your data):
+
+1. [`002-leicester-youth.sql`](supabase/migrations/002-leicester-youth.sql) — match line-ups & league tables
+2. [`003-transfers-cups.sql`](supabase/migrations/003-transfers-cups.sql) — transfers & loans, cups per season, removes player age
 
 ## 3. Set up Supabase (the database)
 
@@ -66,8 +68,9 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 | Table | What |
 |---|---|
 | `settings` | Club name, creator name, tagline, YouTube link |
-| `players` | Name, position, age, country, still in squad or not |
-| `seasons` | Season number, league (tournament) name, notes |
+| `players` | Name, position, country |
+| `player_moves` | Transfers & loans: sold / loaned out / back from loan / released, club, fee, season, date |
+| `seasons` | Season number, league (EFL League Two → Premier League), cups played, notes |
 | `standings` | The league table for a season: team + points |
 | `matches` | Season, tournament, opponent, score, home/away, date, video link |
 | `match_players` | Who played in a match: rating, goals, assists, Player of the Match |
@@ -75,9 +78,9 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 
 ## Using the admin
 
-- **Players** — fill in name, position, age, country and press Enter. The form stays ready for the next player.
-- **Seasons** — *New season* pre-fills the next number and last season's teams. Type the points, or use **Paste a list** (`Arsenal 84` per line).
-- **Matches** — pick the opponent, type the score, click players to add them (or **Same players as last match**), then set each player's rating, goals (+/−), assists (+/−) and tap ★ for Player of the Match.
+- **Players** — fill in name, position, country and press Enter. Click **Edit / transfer** to change details or to **Sell**, **Loan out**, bring **Back from loan** or **Release** a player (club, fee like `12.5m` or `850k`, season, date). Undo a move by removing it from the history.
+- **Seasons** — *New season* pre-fills the next number, last season's league, cups and teams. Pick the league, click the cups played, type the points (or **Paste a list**, `Arsenal 84` per line).
+- **Matches** — the tournament list is the season's league + cups. Pick the opponent, type the score, click players to add them (or **Same players as last match**), then set each player's rating, goals (+/−), assists (+/−) and tap ★ for Player of the Match.
 
 ## Project structure
 
@@ -93,6 +96,5 @@ supabase/migrations/ upgrades for an existing database
 
 ## Ideas for next versions
 
-- Player age history (age per season) and "academy graduate" dates
 - Rating progression chart per player
 - Player photos

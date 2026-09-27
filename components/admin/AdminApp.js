@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabase } from '@/lib/supabase';
 import { makeApi } from '@/lib/admin-api';
 import { seasonLabel } from '@/lib/data';
-import { COUNTRIES, POSITIONS, TOURNAMENTS, positionOrder } from '@/lib/constants';
+import { CUPS, CURRENCIES, LEAGUES } from '@/lib/constants';
 import CrudSection, { Field } from './CrudSection';
 import MatchEditor from './MatchEditor';
 import SeasonEditor from './SeasonEditor';
+import PlayersAdmin from './PlayersAdmin';
 
 const TABS = ['Matches', 'Players', 'Seasons', 'Trophies', 'Site settings'];
 
@@ -107,7 +108,7 @@ function Dashboard({ api, email, onSignOut }) {
         Couldn’t load data: {error}
         {/does not exist|schema cache/.test(error) && (
           <p style={{ marginBottom: 0 }}>
-            Looks like the database hasn’t been upgraded yet — run <code>supabase/migrations/002-leicester-youth.sql</code> in the Supabase SQL Editor.
+            Looks like the database hasn’t been upgraded yet — run the files in <code>supabase/migrations/</code> you haven’t run yet (002, then 003) in the Supabase SQL Editor.
           </p>
         )}
       </div>
@@ -124,6 +125,11 @@ function Dashboard({ api, email, onSignOut }) {
       {api.demo && (
         <div className="notice">
           Demo mode — Supabase isn’t connected, so changes here only last until you refresh. See README to connect.
+        </div>
+      )}
+      {data.missing?.length > 0 && (
+        <div className="notice">
+          The database needs an upgrade for transfers &amp; cups — run <code>supabase/migrations/003-transfers-cups.sql</code> in the Supabase SQL Editor.
         </div>
       )}
       <div className="row" style={{ marginBottom: 20 }}>
@@ -170,34 +176,7 @@ function Dashboard({ api, email, onSignOut }) {
         )
       )}
 
-      {tab === 'Players' && (
-        <CrudSection
-          title="Players"
-          itemName="player"
-          table="players"
-          api={api}
-          onChanged={reload}
-          deleteWarning="Their match stats will be deleted too — to keep them, untick “In squad” instead. "
-          rows={[...data.players].sort(
-            (a, b) => Number(b.is_active) - Number(a.is_active) || positionOrder(a.position) - positionOrder(b.position) || a.name.localeCompare(b.name)
-          )}
-          fields={[
-            { key: 'name', label: 'Name', required: true },
-            { key: 'position', label: 'Position', type: 'select', required: true, options: POSITIONS.map((p) => ({ value: p, label: p })) },
-            { key: 'age', label: 'Age', type: 'number', min: 14, max: 45 },
-            { key: 'country', label: 'Country', suggestions: COUNTRIES },
-            { key: 'is_active', label: 'In squad', type: 'checkbox' },
-          ]}
-          defaults={{ position: 'ST' }}
-          columns={[
-            { key: 'name', label: 'Name' },
-            { key: 'position', label: 'Pos' },
-            { key: 'age', label: 'Age' },
-            { key: 'country', label: 'Country' },
-            { key: 'is_active', label: 'Status', render: (p) => (p.is_active ? <span className="badge green">Squad</span> : <span className="badge">Left</span>) },
-          ]}
-        />
-      )}
+      {tab === 'Players' && <PlayersAdmin data={data} api={api} onChanged={reload} />}
 
       {tab === 'Seasons' && <SeasonEditor data={data} api={api} onChanged={reload} />}
 
@@ -213,7 +192,7 @@ function Dashboard({ api, email, onSignOut }) {
           rows={data.trophies.filter((t) => t.season_id === seasonId)}
           fields={[
             { key: 'season_id', label: 'Season', type: 'select', options: seasonOptions, required: true },
-            { key: 'name', label: 'Trophy', required: true, suggestions: TOURNAMENTS },
+            { key: 'name', label: 'Trophy', required: true, suggestions: [...LEAGUES, ...CUPS] },
           ]}
           columns={[
             { key: 'name', label: 'Trophy' },
@@ -231,10 +210,11 @@ function SettingsForm({ api, settings, onChanged }) {
   const fields = [
     { key: 'club_name', label: 'Club name', required: true },
     { key: 'creator_name', label: 'Creator / channel name' },
+    { key: 'currency', label: 'Currency for transfer fees', type: 'select', required: true, options: CURRENCIES.map((c) => ({ value: c, label: c })) },
     { key: 'youtube_url', label: 'YouTube playlist or channel URL', type: 'url', wide: true },
     { key: 'tagline', label: 'Tagline', type: 'textarea', wide: true },
   ];
-  const [form, setForm] = useState(() => Object.fromEntries(fields.map((f) => [f.key, settings?.[f.key] ?? ''])));
+  const [form, setForm] = useState(() => Object.fromEntries(fields.map((f) => [f.key, settings?.[f.key] ?? (f.key === 'currency' ? '£' : '')])));
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
 

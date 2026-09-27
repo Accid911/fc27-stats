@@ -1,13 +1,14 @@
 -- FC27 Leicester City Youth Career — Supabase schema (fresh install)
 -- Run once in Supabase → SQL Editor → New query → Run.
--- Already ran the first version? Run migrations/002-leicester-youth.sql instead.
+-- Already have a database? Run the files in migrations/ you haven't run yet, in order.
 
 create table if not exists settings (
   id int primary key default 1 check (id = 1),
   club_name text not null default 'Leicester City',
   creator_name text,
   tagline text,
-  youtube_url text
+  youtube_url text,
+  currency text not null default '£'
 );
 insert into settings (id) values (1) on conflict do nothing;
 
@@ -15,6 +16,7 @@ create table if not exists seasons (
   id uuid primary key default gen_random_uuid(),
   number int not null unique,                       -- Season 1, 2, 3…
   tournament text not null default 'Premier League', -- the league played that season
+  cups text[] not null default '{}',                -- cups played that season
   notes text,
   created_at timestamptz default now()
 );
@@ -23,9 +25,7 @@ create table if not exists players (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   position text,
-  age int,
   country text,
-  is_active boolean not null default true,          -- still in the squad?
   created_at timestamptz default now()
 );
 
@@ -48,6 +48,20 @@ create table if not exists trophies (
   season_id uuid not null references seasons(id) on delete cascade,
   name text not null
 );
+
+-- Transfers & loans (a player's status comes from their latest move)
+create table if not exists player_moves (
+  id uuid primary key default gen_random_uuid(),
+  player_id uuid not null references players(id) on delete cascade,
+  type text not null check (type in ('sold', 'loan', 'loan_return', 'released')),
+  club text,
+  fee numeric(14,2),
+  season_id uuid references seasons(id) on delete set null,
+  moved_on date,
+  notes text,
+  created_at timestamptz default now()
+);
+create index if not exists player_moves_player on player_moves (player_id);
 
 create table if not exists admins (
   email text primary key
@@ -85,7 +99,7 @@ $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','seasons','standings','players','matches','match_players','trophies'] loop
+  foreach t in array array['settings','seasons','standings','players','matches','match_players','trophies','player_moves'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "public read" on %I', t);
     execute format('drop policy if exists "admin write" on %I', t);
@@ -97,8 +111,8 @@ end $$;
 alter table admins enable row level security;  -- no policies: invisible to the public API
 
 grant usage on schema public to anon, authenticated;
-grant select on settings, seasons, standings, players, matches, match_players, trophies to anon, authenticated;
-grant insert, update, delete on settings, seasons, standings, players, matches, match_players, trophies to authenticated;
+grant select on settings, seasons, standings, players, matches, match_players, trophies, player_moves to anon, authenticated;
+grant insert, update, delete on settings, seasons, standings, players, matches, match_players, trophies, player_moves to authenticated;
 revoke all on admins from anon, authenticated;
 grant execute on function is_admin() to anon, authenticated;
 
@@ -154,22 +168,27 @@ begin
   return v_id;
 end $$;
 
--- Save a season + its league table in one go.
+-- Save a season (league + cups) and its league table in one go.
 create or replace function save_season(p_season jsonb, p_teams jsonb)
 returns uuid language plpgsql security invoker set search_path = public as $$
 declare
   v_id uuid := nullif(p_season->>'id', '')::uuid;
+  v_cups text[] := coalesce(
+    (select array_agg(trim(c)) from jsonb_array_elements_text(coalesce(p_season->'cups', '[]'::jsonb)) c where trim(c) <> ''),
+    '{}'
+  );
 begin
   if not is_admin() then raise exception 'Only admins can save seasons'; end if;
 
   if v_id is null then
-    insert into seasons (number, tournament, notes)
-    values ((p_season->>'number')::int, coalesce(nullif(p_season->>'tournament', ''), 'Premier League'), nullif(p_season->>'notes', ''))
+    insert into seasons (number, tournament, cups, notes)
+    values ((p_season->>'number')::int, coalesce(nullif(p_season->>'tournament', ''), 'Premier League'), v_cups, nullif(p_season->>'notes', ''))
     returning id into v_id;
   else
     update seasons set
       number     = (p_season->>'number')::int,
       tournament = coalesce(nullif(p_season->>'tournament', ''), 'Premier League'),
+      cups       = v_cups,
       notes      = nullif(p_season->>'notes', '')
     where id = v_id;
     if not found then raise exception 'Season not found'; end if;

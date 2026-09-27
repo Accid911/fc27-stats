@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { loadAll, buildModel, teamRecord, leagueTable, playerStats, ordinal, seasonLabel } from '@/lib/data';
+import Link from 'next/link';
+import { loadAll, buildModel, teamRecord, leagueTable, playerStats, ordinal, seasonLabel, formatMoney, MOVE_LABEL } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import MatchTable from '@/components/MatchTable';
 import DemoNotice from '@/components/DemoNotice';
@@ -21,7 +22,8 @@ export default async function SeasonPage({ params }) {
     .filter((p) => p.apps > 0)
     .map((p) => ({ ...p, href: `/players/${p.id}` }));
 
-  const tournaments = [...new Set(matches.map((m) => m.tournament || '—'))];
+  const tournaments = [...new Set([season.tournament, ...(season.cups || []), ...matches.map((m) => m.tournament || '—')])];
+  const moves = model.moves.filter((mv) => mv.season_id === id).reverse();
 
   return (
     <>
@@ -35,6 +37,9 @@ export default async function SeasonPage({ params }) {
         <span className="badge">{r.CS} clean sheets</span>
         {trophies.map((t) => <span key={t.id} className="badge gold">🏆 {t.name}</span>)}
       </div>
+      {season.cups?.length > 0 && (
+        <p className="muted" style={{ marginTop: 10, fontSize: 14 }}>Cups: {season.cups.join(' · ')}</p>
+      )}
       {season.notes && <p className="muted" style={{ marginTop: 14 }}>{season.notes}</p>}
 
       <section className="section grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}>
@@ -69,7 +74,7 @@ export default async function SeasonPage({ params }) {
               <table>
                 <thead><tr><th>Tournament</th><th className="num">P</th><th>W-D-L</th><th className="num">GF</th><th className="num">GA</th></tr></thead>
                 <tbody>
-                  {tournaments.length === 0 && <tr><td colSpan={5} className="muted">No matches yet.</td></tr>}
+
                   {tournaments.map((t) => {
                     const x = teamRecord(matches.filter((m) => (m.tournament || '—') === t));
                     return (
@@ -109,6 +114,29 @@ export default async function SeasonPage({ params }) {
           />
         </div>
       </section>
+
+      {moves.length > 0 && (
+        <section className="section">
+          <h2>Transfers &amp; loans</h2>
+          <div className="card pad-0">
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Player</th><th>What</th><th>Club</th><th className="num">Fee</th></tr></thead>
+                <tbody>
+                  {moves.map((mv) => (
+                    <tr key={mv.id}>
+                      <td><Link href={`/players/${mv.player_id}`}>{mv.player.name}</Link></td>
+                      <td>{MOVE_LABEL[mv.type]}</td>
+                      <td>{mv.club || '—'}</td>
+                      <td className="num">{mv.fee != null ? formatMoney(mv.fee, model.currency) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="section">
         <h2>Matches</h2>

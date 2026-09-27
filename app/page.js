@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import {
   loadAll, buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook,
-  countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel,
+  countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, MOVE_LABEL,
 } from '@/lib/data';
+import Logo from '@/components/Logo';
 import Leaderboard from '@/components/Leaderboard';
 import DemoNotice from '@/components/DemoNotice';
 import { BarList, ColumnChart } from '@/components/Charts';
@@ -32,10 +33,13 @@ export default async function Home() {
 
   const minApps = Math.max(3, Math.ceil(model.matches.length * 0.2));
   const used = stats.filter((p) => p.apps > 0);
-  const squad = data.players.filter((p) => p.is_active);
-  const ages = squad.map((p) => p.age).filter((a) => a != null);
-  const avgAge = ages.length ? (ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(1) : '—';
-  const youngestScorer = [...stats].filter((p) => p.goals > 0 && p.age != null).sort((a, b) => a.age - b.age)[0];
+  const statusOf = (p) => model.statusById[p.id]?.status;
+  const squad = data.players.filter((p) => statusOf(p) === 'squad');
+  const onLoan = data.players.filter((p) => statusOf(p) === 'loan');
+  const sales = model.moves.filter((mv) => mv.type === 'sold');
+  const income = sales.reduce((a, mv) => a + Number(mv.fee || 0), 0);
+  const recordSale = [...sales].filter((mv) => mv.fee != null).sort((a, b) => Number(b.fee) - Number(a.fee))[0];
+  const recentMoves = [...model.moves].reverse().slice(0, 5);
 
   const goalsBySeason = model.seasons.map((s) => {
     const r = teamRecord(model.matches.filter((m) => m.season_id === s.id));
@@ -63,13 +67,21 @@ export default async function Home() {
         <div className="eyebrow" style={{ color: 'var(--gold)' }}>
           FC27 Career Mode · Academy players only{settings.creator_name ? ` · ${settings.creator_name}` : ''}
         </div>
-        <h1>{model.clubName}</h1>
-        {settings.tagline && <p>{settings.tagline}</p>}
-        {settings.youtube_url && (
-          <div style={{ marginTop: 18 }}>
-            <a className="btn" href={settings.youtube_url} target="_blank" rel="noreferrer">▶ Watch the series</a>
+        <div className="hero-row">
+          <div>
+            <h1>{model.clubName}</h1>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              Youth Edition
+            </div>
+            {settings.tagline && <p>{settings.tagline}</p>}
+            {settings.youtube_url && (
+              <div style={{ marginTop: 18 }}>
+                <a className="btn" href={settings.youtube_url} target="_blank" rel="noreferrer">▶ Watch the series</a>
+              </div>
+            )}
           </div>
-        )}
+          <Logo size={120} className="hero-logo" />
+        </div>
       </section>
 
       <section className="section grid grid-kpi">
@@ -159,7 +171,7 @@ export default async function Home() {
             sub={(p) => `${p.rated} rated games`}
             empty={`Needs ${minApps}+ rated games.`}
           />
-          <Leaderboard title="Most appearances" rows={topBy(stats, 'apps')} valueKey="apps" sub={(p) => (p.age ? `Age ${p.age}` : '')} />
+          <Leaderboard title="Most appearances" rows={topBy(stats, 'apps')} valueKey="apps" sub={(p) => p.country || ''} />
         </div>
       </section>
 
@@ -181,9 +193,10 @@ export default async function Home() {
         <h2>The academy squad</h2>
         <div className="grid grid-kpi" style={{ marginBottom: 16 }}>
           <Kpi value={squad.length} label="Players in squad" />
-          <Kpi value={avgAge} label="Average age" />
-          <Kpi value={byCountry.length} label="Countries" />
-          <Kpi value={youngestScorer ? youngestScorer.age : '—'} label={youngestScorer ? `Youngest scorer: ${youngestScorer.name}` : 'Youngest scorer'} />
+          <Kpi value={onLoan.length} label="Out on loan" />
+          <Kpi value={sales.length} label="Players sold" />
+          <Kpi value={formatMoney(income, model.currency)} label="Transfer income" gold />
+          <Kpi value={byCountry.length} label="Countries in squad" />
         </div>
         <div className="grid grid-2">
           <div className="card">
@@ -194,6 +207,45 @@ export default async function Home() {
             <h3 style={{ marginBottom: 12 }}>Squad by position</h3>
             <BarList rows={byGroup} tip={(r) => `${r.label}: ${r.value}`} />
           </div>
+        </div>
+      </section>
+
+      <section className="section grid grid-2">
+        <div className="card">
+          <div className="row" style={{ marginBottom: 8 }}>
+            <h3>Latest transfers &amp; loans</h3>
+            <span className="spacer" />
+            <Link className="link" href="/transfers">All →</Link>
+          </div>
+          {recentMoves.length === 0 && <p className="muted">No one has left the academy yet.</p>}
+          {recentMoves.map((mv) => (
+            <div className="leader" key={mv.id}>
+              <span className="name">
+                <Link href={`/players/${mv.player_id}`}>{mv.player.name}</Link>
+                <span className="muted" style={{ display: 'block', fontSize: 12, fontWeight: 400 }}>
+                  {MOVE_LABEL[mv.type]}{mv.club ? ` · ${mv.club}` : ''}{mv.season ? ` · ${seasonLabel(mv.season)}` : ''}
+                </span>
+              </span>
+              {mv.fee != null && <span className="val" style={{ fontSize: 20 }}>{formatMoney(mv.fee, model.currency)}</span>}
+            </div>
+          ))}
+        </div>
+        <div className="card record-card">
+          <div className="label">Record sale</div>
+          {recordSale ? (
+            <>
+              <div className="big" style={{ color: 'var(--gold)' }}>{formatMoney(recordSale.fee, model.currency)}</div>
+              <div className="sub">
+                <Link href={`/players/${recordSale.player_id}`}>{recordSale.player.name}</Link> → {recordSale.club || '—'}
+                {recordSale.season ? ` · ${seasonLabel(recordSale.season)}` : ''}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="big">—</div>
+              <div className="sub">Nobody sold yet.</div>
+            </>
+          )}
         </div>
       </section>
 

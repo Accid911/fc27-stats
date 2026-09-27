@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { buildModel, isClub, leagueTable, ordinal, seasonLabel } from '@/lib/data';
-import { TOURNAMENTS } from '@/lib/constants';
+import { CUPS, LEAGUES } from '@/lib/constants';
 
 export default function SeasonEditor({ data, api, onChanged }) {
   const model = useMemo(() => buildModel(data), [data]);
@@ -50,16 +50,17 @@ export default function SeasonEditor({ data, api, onChanged }) {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Season</th><th>Tournament</th><th className="num">Teams</th><th>{model.clubName}</th><th className="num">Matches</th><th></th></tr>
+              <tr><th>Season</th><th>League</th><th>Cups</th><th className="num">Teams</th><th>{model.clubName}</th><th className="num">Matches</th><th></th></tr>
             </thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={6} className="muted">No seasons yet — click “New season”.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={7} className="muted">No seasons yet — click “New season”.</td></tr>}
               {list.map((s) => {
                 const t = leagueTable(model, s.id);
                 return (
                   <tr key={s.id}>
                     <td style={{ fontWeight: 600 }}>{seasonLabel(s)}</td>
                     <td>{s.tournament}</td>
+                    <td className="muted" style={{ whiteSpace: 'normal' }}>{(s.cups || []).join(', ') || '—'}</td>
                     <td className="num">{t.rows.length}</td>
                     <td>{t.club ? `${ordinal(t.club.pos)} · ${t.club.points} pts` : '—'}</td>
                     <td className="num">{model.matches.filter((m) => m.season_id === s.id).length}</td>
@@ -89,6 +90,16 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
 
   const [number, setNumber] = useState(initial.number ?? (last ? last.number + 1 : 1));
   const [tournament, setTournament] = useState(initial.tournament ?? last?.tournament ?? 'Premier League');
+  const [cups, setCups] = useState(() => initial.cups ?? last?.cups ?? ['FA Cup', 'EFL Cup']);
+  const [otherCup, setOtherCup] = useState('');
+  const leagueOptions = LEAGUES.includes(tournament) ? LEAGUES : [...LEAGUES, tournament];
+  const cupOptions = [...CUPS, ...cups.filter((c) => !CUPS.includes(c))];
+  const toggleCup = (c) => setCups((cs) => (cs.includes(c) ? cs.filter((x) => x !== c) : [...cs, c]));
+  function addOtherCup() {
+    const c = otherCup.trim();
+    if (c && !cups.includes(c)) setCups((cs) => [...cs, c]);
+    setOtherCup('');
+  }
   const [notes, setNotes] = useState(initial.notes ?? '');
   const [rows, setRows] = useState(() => {
     if (!isNew) return leagueTable(model, initial.id).rows.map((r) => newRow(r.team, r.points));
@@ -104,7 +115,7 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
 
   // Live positions by points
   const positions = useMemo(() => {
-    const filled = rows.filter((r) => r.team.trim());
+    const filled = rows.filter((r) => r.team.trim() && r.points !== '');
     const sorted = [...filled].sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0) || a.team.localeCompare(b.team));
     return Object.fromEntries(sorted.map((r, i) => [r.k, i + 1]));
   }, [rows]);
@@ -138,7 +149,7 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
     setError('');
     try {
       await api.saveSeason(
-        { id: initial.id || null, number: n, tournament: tournament.trim() || 'Premier League', notes: notes || null },
+        { id: initial.id || null, number: n, tournament: tournament.trim() || 'Premier League', cups, notes: notes || null },
         rows.filter((r) => r.team.trim()).map((r) => ({ team: r.team.trim(), points: Number(r.points) || 0 }))
       );
       await onSaved(`Saved ✓ Season ${n}`);
@@ -160,10 +171,35 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
         <div className="form-grid">
           <label>Season number *<input type="number" min="1" value={number} onChange={(e) => setNumber(e.target.value)} required /></label>
           <label>
-            Tournament (league) *
-            <input list="dl-league" value={tournament} onChange={(e) => setTournament(e.target.value)} required autoComplete="off" />
-            <datalist id="dl-league">{TOURNAMENTS.map((t) => <option key={t} value={t} />)}</datalist>
+            League *
+            <select value={tournament} onChange={(e) => setTournament(e.target.value)} required>
+              {leagueOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
           </label>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <div className="muted" style={{ fontSize: 13, marginBottom: 6 }}>Cups this season — click to add or remove</div>
+          <div className="chips">
+            {cupOptions.map((c) => (
+              <button type="button" key={c} className={`chip ${cups.includes(c) ? 'on' : ''}`} onClick={() => toggleCup(c)} aria-pressed={cups.includes(c)}>
+                {cups.includes(c) ? '✓ ' : '+ '}{c}
+              </button>
+            ))}
+          </div>
+          <div className="row" style={{ marginTop: 10, gap: 8 }}>
+            <input
+              value={otherCup}
+              onChange={(e) => setOtherCup(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOtherCup(); } }}
+              placeholder="Other cup…"
+              style={{ maxWidth: 240 }}
+            />
+            <button type="button" className="btn secondary small" onClick={addOtherCup} disabled={!otherCup.trim()}>Add</button>
+          </div>
+        </div>
+
+        <div className="form-grid" style={{ marginTop: 16 }}>
           <label className="wide">Notes<textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
         </div>
       </div>

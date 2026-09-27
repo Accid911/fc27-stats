@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { buildModel, isClub, matchResult, seasonLabel } from '@/lib/data';
-import { TOURNAMENTS, positionOrder } from '@/lib/constants';
+import { buildModel, isClub, matchResult, seasonLabel, seasonTournaments, STATUS_LABEL } from '@/lib/data';
+import { positionOrder } from '@/lib/constants';
 
 export default function MatchEditor({ data, seasonId, api, onChanged }) {
   const model = useMemo(() => buildModel(data), [data]);
@@ -117,6 +117,10 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
   const [error, setError] = useState('');
 
   const set = (k, v) => setM((s) => ({ ...s, [k]: v }));
+  function changeSeason(id) {
+    const list = seasonTournaments(model.seasonById[id]);
+    setM((s) => ({ ...s, season_id: id, tournament: list.includes(s.tournament) ? s.tournament : list[0] || '' }));
+  }
 
   const opponents = useMemo(() => {
     const fromTable = model.data.standings
@@ -126,16 +130,18 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
     return [...new Set([...fromTable, ...past])].sort();
   }, [model, m.season_id]);
 
-  const tournaments = useMemo(
-    () => [...new Set([model.seasonById[m.season_id]?.tournament, ...TOURNAMENTS, ...model.matches.map((x) => x.tournament)].filter(Boolean))],
-    [model, m.season_id]
-  );
+  // Only the league + cups of the chosen season (plus the saved value when editing an older match)
+  const tournaments = useMemo(() => {
+    const list = seasonTournaments(model.seasonById[m.season_id]);
+    return initial.tournament && !list.includes(initial.tournament) ? [...list, initial.tournament] : list;
+  }, [model, m.season_id, initial.tournament]);
 
   const picked = new Set(rows.map((r) => r.player_id));
+  const inSquad = (p) => model.statusById[p.id]?.status === 'squad';
   const available = model.data.players
-    .filter((p) => !picked.has(p.id) && (showLeft || p.is_active))
-    .sort((a, b) => positionOrder(a.position) - positionOrder(b.position) || a.name.localeCompare(b.name));
-  const hiddenLeft = model.data.players.filter((p) => !picked.has(p.id) && !p.is_active).length;
+    .filter((p) => !picked.has(p.id) && (showLeft || inSquad(p)))
+    .sort((a, b) => Number(inSquad(b)) - Number(inSquad(a)) || positionOrder(a.position) - positionOrder(b.position) || a.name.localeCompare(b.name));
+  const hiddenLeft = model.data.players.filter((p) => !picked.has(p.id) && !inSquad(p)).length;
 
   // Previous match (for "same players as last match")
   const previous = useMemo(() => {
@@ -210,14 +216,15 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
         <div className="form-grid">
           <label>
             Season *
-            <select value={m.season_id} onChange={(e) => set('season_id', e.target.value)} required>
+            <select value={m.season_id} onChange={(e) => changeSeason(e.target.value)} required>
               {[...model.seasons].reverse().map((s) => <option key={s.id} value={s.id}>{seasonLabel(s)}</option>)}
             </select>
           </label>
           <label>
-            Tournament
-            <input list="dl-tournaments" value={m.tournament} onChange={(e) => set('tournament', e.target.value)} autoComplete="off" />
-            <datalist id="dl-tournaments">{tournaments.map((t) => <option key={t} value={t} />)}</datalist>
+            Tournament *
+            <select value={m.tournament} onChange={(e) => set('tournament', e.target.value)} required>
+              {tournaments.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
           </label>
           <label>
             Opponent *
@@ -271,11 +278,12 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
           {available.map((p) => (
             <button type="button" key={p.id} className="chip" onClick={() => addPlayer(p.id)}>
               <span className="chip-pos">{p.position || '?'}</span> {p.name}
+              {!inSquad(p) && <span className="muted"> · {STATUS_LABEL[model.statusById[p.id]?.status]}</span>}
             </button>
           ))}
           {available.length === 0 && <span className="muted">Everyone’s in.</span>}
           {hiddenLeft > 0 && !showLeft && (
-            <button type="button" className="chip ghost" onClick={() => setShowLeft(true)}>+ {hiddenLeft} former player{hiddenLeft > 1 ? 's' : ''}</button>
+            <button type="button" className="chip ghost" onClick={() => setShowLeft(true)}>+ {hiddenLeft} on loan / sold / released</button>
           )}
         </div>
 
