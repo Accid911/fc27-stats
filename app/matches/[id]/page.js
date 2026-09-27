@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { loadAll, buildModel, seasonLabel } from '@/lib/data';
+import { loadAll, buildModel, seasonLabel, fixture } from '@/lib/data';
 import { positionOrder } from '@/lib/constants';
 import DemoNotice from '@/components/DemoNotice';
 
@@ -21,6 +21,7 @@ export default async function MatchPage({ params }) {
     const pb = model.playerById[b.player_id];
     return positionOrder(pa.position) - positionOrder(pb.position) || pa.name.localeCompare(pb.name);
   });
+  const f = fixture(m, model.clubName);
   const potm = m.lineup.find((r) => r.potm);
   const rated = m.lineup.filter((r) => r.rating != null);
   const teamAvg = rated.length ? (rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length).toFixed(1) : null;
@@ -36,15 +37,20 @@ export default async function MatchPage({ params }) {
 
       <div className="card hero" style={{ textAlign: 'center' }}>
         <div className="scoreline" style={{ margin: 0 }}>
-          <span className="team" style={{ fontSize: 'clamp(18px, 4vw, 30px)' }}>{model.clubName}</span>
+          <span className="team" style={{ fontSize: 'clamp(18px, 4vw, 30px)', color: f.home.club ? 'var(--text)' : 'var(--muted)' }}>{f.home.name}</span>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(40px, 9vw, 72px)', fontWeight: 800 }}>
-            {m.goals_for} – {m.goals_against}
+            {f.home.goals} – {f.away.goals}
           </span>
-          <span className="team" style={{ fontSize: 'clamp(18px, 4vw, 30px)', textAlign: 'left' }}>{m.opponent}</span>
+          <span className="team" style={{ fontSize: 'clamp(18px, 4vw, 30px)', textAlign: 'left', color: f.away.club ? 'var(--text)' : 'var(--muted)' }}>{f.away.name}</span>
         </div>
+        {f.pens && (
+          <div className="muted" style={{ fontSize: 16, marginTop: 4 }}>
+            Penalties: <b style={{ color: 'var(--text)' }}>{f.home.pens} – {f.away.pens}</b>
+          </div>
+        )}
         <div className="row" style={{ justifyContent: 'center', marginTop: 12 }}>
           <span className={`result lg ${m.result}`}>{m.result}</span>
-          <span className="muted">{RESULT[m.result]}</span>
+          <span className="muted">{RESULT[m.result]}{f.pens ? ' on penalties' : ''}</span>
           {potm && <span className="badge gold">★ POTM: {model.playerById[potm.player_id].name}</span>}
           {teamAvg && <span className="badge">Team rating {teamAvg}</span>}
         </div>

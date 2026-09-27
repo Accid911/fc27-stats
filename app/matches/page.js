@@ -32,7 +32,7 @@ export default async function MatchesPage({ searchParams }) {
         ))}
       </div>
       <div className="card pad-0">
-        <MatchTable matches={matches} playerById={model.playerById} showSeason={!selected} />
+        <MatchTable matches={matches} playerById={model.playerById} clubName={model.clubName} showSeason={!selected} />
       </div>
     </>
   );

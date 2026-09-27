@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import {
   loadAll, buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook,
-  countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, MOVE_LABEL,
+  countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, MOVE_LABEL, fixture, fixtureText,
 } from '@/lib/data';
 import Logo from '@/components/Logo';
 import Leaderboard from '@/components/Leaderboard';
@@ -103,7 +103,7 @@ export default async function Home() {
             <>
               <div className="form-strip">
                 {last5.map((m) => (
-                  <Link key={m.id} href={`/matches/${m.id}`} title={`${m.goals_for}–${m.goals_against} vs ${m.opponent}`}>
+                  <Link key={m.id} href={`/matches/${m.id}`} title={fixtureText(m, model.clubName)}>
                     <span className={`result lg ${m.result}`}>{m.result}</span>
                   </Link>
                 ))}
@@ -141,9 +141,9 @@ export default async function Home() {
       <section className="section">
         <h2>Record book</h2>
         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-          <MatchRecord label="Biggest win" m={book.biggestWin} />
-          <MatchRecord label="Heaviest defeat" m={book.worstLoss} />
-          <MatchRecord label="Highest-scoring game" m={book.mostGoals} />
+          <MatchRecord label="Biggest win" m={book.biggestWin} clubName={model.clubName} />
+          <MatchRecord label="Heaviest defeat" m={book.worstLoss} clubName={model.clubName} />
+          <MatchRecord label="Highest-scoring game" m={book.mostGoals} clubName={model.clubName} />
           <Record label="Longest winning run" big={plural(run.bestWin, 'match')} sub="in a row" />
           <Record label="Longest unbeaten run" big={plural(run.bestUnbeaten, 'match')} sub="without losing" />
           <PlayerRecord label="Best match rating" r={book.bestRating} fmt={(v) => v.toFixed(1)} />
@@ -298,14 +298,16 @@ function Record({ label, big, sub }) {
   );
 }
 
-function MatchRecord({ label, m }) {
+function MatchRecord({ label, m, clubName }) {
   if (!m) return <Record label={label} big="—" sub="Not yet" />;
+  const f = fixture(m, clubName);
+  const short = (t) => (t.club ? clubName.split(' ')[0] : t.name);
   return (
     <div className="card record-card">
       <div className="label">{label}</div>
-      <div className="big">{m.goals_for}–{m.goals_against}</div>
+      <div className="big">{f.home.goals}–{f.away.goals}{f.pens ? <span style={{ fontSize: 16 }}> ({f.home.pens}–{f.away.pens} p)</span> : null}</div>
       <div className="sub">
-        vs <Link href={`/matches/${m.id}`}>{m.opponent}</Link> · {seasonLabel(m.season)}
+        <Link href={`/matches/${m.id}`}>{short(f.home)} v {short(f.away)}</Link> · {seasonLabel(m.season)}
       </div>
     </div>
   );

@@ -37,6 +37,7 @@ Already have a database? Run the migration files you haven't run yet, in order, 
 
 1. [`002-leicester-youth.sql`](supabase/migrations/002-leicester-youth.sql) — match line-ups & league tables
 2. [`003-transfers-cups.sql`](supabase/migrations/003-transfers-cups.sql) — transfers & loans, cups per season, removes player age
+3. [`004-penalties-table.sql`](supabase/migrations/004-penalties-table.sql) — penalty shoot-outs, full league table (W/D/L/GF/GA)
 
 ## 3. Set up Supabase (the database)
 
@@ -71,16 +72,16 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 | `players` | Name, position, country |
 | `player_moves` | Transfers & loans: sold / loaned out / back from loan / released, club, fee, season, date |
 | `seasons` | Season number, league (EFL League Two → Premier League), cups played, notes |
-| `standings` | The league table for a season: team + points |
-| `matches` | Season, tournament, opponent, score, home/away, date, video link |
+| `standings` | The league table for a season: team, W, D, L, GF, GA, points |
+| `matches` | Season, tournament, opponent, score, penalties (cup draws), home/away, date, video link |
 | `match_players` | Who played in a match: rating, goals, assists, Player of the Match |
 | `trophies` | Trophy name per season |
 
 ## Using the admin
 
 - **Players** — fill in name, position, country and press Enter. Click **Edit / transfer** to change details or to **Sell**, **Loan out**, bring **Back from loan** or **Release** a player (club, fee like `12.5m` or `850k`, season, date). Undo a move by removing it from the history.
-- **Seasons** — *New season* pre-fills the next number, last season's league, cups and teams. Pick the league, click the cups played, type the points (or **Paste a list**, `Arsenal 84` per line).
-- **Matches** — the tournament list is the season's league + cups. Pick the opponent, type the score, click players to add them (or **Same players as last match**), then set each player's rating, goals (+/−), assists (+/−) and tap ★ for Player of the Match.
+- **Seasons** — *New season* pre-fills the next number, last season's league, cups and teams. Pick the league, click the cups played, fill in W/D/L/GF/GA/points (points auto-fill as 3×W + D), or **Paste a list** (`Arsenal 38 26 6 6 80 30 50 84` or just `Arsenal 84`). Leicester's row can be filled in from the logged league matches.
+- **Matches** — the tournament list is the season's league + cups. Pick the opponent and home/away (away games show the opponent first), type the score — a drawn cup match shows penalty boxes — click players to add them (or **Same players as last match**), then set each player's rating, goals (+/−), assists (+/−) and tap ★ for Player of the Match.
 
 ## Project structure
 

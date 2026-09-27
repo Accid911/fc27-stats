@@ -82,7 +82,15 @@ export default function SeasonEditor({ data, api, onChanged }) {
 }
 
 let rowKey = 0;
-const newRow = (team = '', points = '') => ({ k: ++rowKey, team, points });
+const STATS = ['won', 'drawn', 'lost', 'gf', 'ga'];
+const newRow = (team = '', points = '', extra = {}) => ({
+  k: ++rowKey, team, points, won: '', drawn: '', lost: '', gf: '', ga: '', ...extra,
+});
+const blankIfNull = (v) => (v == null ? '' : v);
+const n = (v) => (v === '' || v == null ? null : Number(v));
+// Points typed, or 3×W + D when only W/D/L are filled in
+const pointsOf = (r) => (r.points !== '' ? Number(r.points) : r.won !== '' || r.drawn !== '' ? 3 * (Number(r.won) || 0) + (Number(r.drawn) || 0) : null);
+const gdOf = (r) => (r.gf !== '' && r.ga !== '' ? Number(r.gf) - Number(r.ga) : null);
 
 function SeasonForm({ model, initial, api, onCancel, onSaved }) {
   const isNew = !initial.id;
@@ -102,7 +110,10 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
   }
   const [notes, setNotes] = useState(initial.notes ?? '');
   const [rows, setRows] = useState(() => {
-    if (!isNew) return leagueTable(model, initial.id).rows.map((r) => newRow(r.team, r.points));
+    if (!isNew)
+      return leagueTable(model, initial.id).rows.map((r) =>
+        newRow(r.team, r.points, Object.fromEntries(STATS.map((k) => [k, blankIfNull(r[k])])))
+      );
     // New season: start from last season's teams (points empty), or just the club.
     const prev = last ? leagueTable(model, last.id).rows.map((r) => newRow(r.team, '')) : [];
     return prev.length ? prev : [newRow(model.clubName, '')];
@@ -113,10 +124,24 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
 
   const update = (k, key, v) => setRows((rs) => rs.map((r) => (r.k === k ? { ...r, [key]: v } : r)));
 
+  // Leicester's own row can be calculated from the league matches already logged for this season.
+  const leagueMatches = initial.id ? model.matches.filter((x) => x.season_id === initial.id && x.tournament === tournament) : [];
+  function fillFromMatches(k) {
+    const t = { won: 0, drawn: 0, lost: 0, gf: 0, ga: 0 };
+    for (const x of leagueMatches) {
+      t.gf += x.goals_for;
+      t.ga += x.goals_against;
+      if (x.goals_for > x.goals_against) t.won++;
+      else if (x.goals_for < x.goals_against) t.lost++;
+      else t.drawn++;
+    }
+    setRows((rs) => rs.map((r) => (r.k === k ? { ...r, ...t, points: 3 * t.won + t.drawn } : r)));
+  }
+
   // Live positions by points
   const positions = useMemo(() => {
-    const filled = rows.filter((r) => r.team.trim() && r.points !== '');
-    const sorted = [...filled].sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0) || a.team.localeCompare(b.team));
+    const filled = rows.filter((r) => r.team.trim() && pointsOf(r) != null);
+    const sorted = [...filled].sort((a, b) => pointsOf(b) - pointsOf(a) || (gdOf(b) ?? 0) - (gdOf(a) ?? 0) || (Number(b.gf) || 0) - (Number(a.gf) || 0) || a.team.localeCompare(b.team));
     return Object.fromEntries(sorted.map((r, i) => [r.k, i + 1]));
   }, [rows]);
 
@@ -126,10 +151,23 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
-        // "1. Arsenal 45", "Arsenal, 45", "Arsenal\t45" → team + last number
+        // "1. Arsenal 84", "Arsenal, 84" → team + points
+        // "Arsenal 38 26 6 6 80 30 50 84" → P W D L GF GA GD Pts (also W D L GF GA GD Pts, or W D L GF GA Pts)
         const cleaned = line.replace(/^\d+[.)]?\s+/, '');
-        const m = cleaned.match(/^(.*?)[\s,;:\t-]+(-?\d+)\s*(pts?)?$/i);
-        return m ? newRow(m[1].trim(), m[2]) : newRow(cleaned, '');
+        const m = cleaned.match(/^(.*?[^\d\s,;:\t+-])[\s,;:\t]+((?:[+-]?\d+[\s,;:\t]*)+?)\s*(pts?)?$/i);
+        if (!m) return newRow(cleaned, '');
+        const nums = m[2].trim().split(/[\s,;:\t]+/).map(Number);
+        const team = m[1].trim();
+        const row = (w, d, l, gf, ga, pts) => newRow(team, pts, { won: w, drawn: d, lost: l, gf, ga });
+        if (nums.length >= 8) { const t = nums.slice(-8); return row(t[1], t[2], t[3], t[4], t[5], t[7]); } // P W D L GF GA GD Pts
+        if (nums.length === 7) {
+          const t = nums;
+          return t[0] === t[1] + t[2] + t[3]
+            ? row(t[1], t[2], t[3], t[4], t[5], t[6]) // P W D L GF GA Pts
+            : row(t[0], t[1], t[2], t[3], t[4], t[6]); // W D L GF GA GD Pts
+        }
+        if (nums.length === 6) return row(...nums); // W D L GF GA Pts
+        return newRow(team, nums[nums.length - 1]);
       });
     if (!parsed.length) return setPaste(null);
     const hasClub = parsed.some((r) => isClub(r.team, model.clubName));
@@ -150,7 +188,11 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
     try {
       await api.saveSeason(
         { id: initial.id || null, number: n, tournament: tournament.trim() || 'Premier League', cups, notes: notes || null },
-        rows.filter((r) => r.team.trim()).map((r) => ({ team: r.team.trim(), points: Number(r.points) || 0 }))
+        rows.filter((r) => r.team.trim()).map((r) => ({
+          team: r.team.trim(),
+          points: pointsOf(r) ?? 0,
+          ...Object.fromEntries(STATS.map((k) => [k, n(r[k])])),
+        }))
       );
       await onSaved(`Saved ✓ Season ${n}`);
     } catch (err) {
@@ -216,23 +258,51 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
         {paste != null && (
           <div style={{ marginBottom: 16 }}>
             <p className="muted" style={{ fontSize: 13, margin: '0 0 6px' }}>
-              One team per line, points at the end — e.g. <code>Arsenal 84</code> or <code>Arsenal, 84</code>. This replaces the table below.
+              One team per line. Just points (<code>Arsenal 84</code>) or the full row
+              {' '}<code>Arsenal 38 26 6 6 80 30 50 84</code> (P W D L GF GA GD Pts). This replaces the table below.
             </p>
-            <textarea rows={8} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={'Arsenal 84\nLiverpool 80\nLeicester City 71\n…'} />
+            <textarea rows={8} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={'Arsenal 38 26 6 6 80 30 50 84\nLiverpool 38 25 5 8 77 35 42 80\nLeicester City 38 21 8 9 70 41 29 71\n…'} />
             <button type="button" className="btn small" style={{ marginTop: 8 }} onClick={applyPaste}>Use this list</button>
           </div>
         )}
 
         <div className="table-wrap">
           <table className="lineup">
-            <thead><tr><th className="num">Pos</th><th>Team</th><th className="num">Points</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th className="num">Pos</th><th>Team</th>
+                <th className="num">W</th><th className="num">D</th><th className="num">L</th>
+                <th className="num">GF</th><th className="num">GA</th><th className="num">GD</th>
+                <th className="num">Pts</th><th></th>
+              </tr>
+            </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.k} className={isClub(r.team, model.clubName) ? 'is-club' : ''}>
                   <td className="num muted">{positions[r.k] ?? ''}</td>
-                  <td><input value={r.team} onChange={(e) => update(r.k, 'team', e.target.value)} placeholder="Team name" /></td>
+                  <td style={{ minWidth: 170 }}>
+                    <input value={r.team} onChange={(e) => update(r.k, 'team', e.target.value)} placeholder="Team name" />
+                    {isClub(r.team, model.clubName) && leagueMatches.length > 0 && (
+                      <button type="button" className="linkish" style={{ fontSize: 12, marginTop: 4 }} onClick={() => fillFromMatches(r.k)}>
+                        Fill in from {leagueMatches.length} logged league matches
+                      </button>
+                    )}
+                  </td>
+                  {STATS.map((key) => (
+                    <td key={key} className="num">
+                      <input className="stat-input narrow" type="number" min="0" value={r[key]} onChange={(e) => update(r.k, key, e.target.value)} aria-label={key} />
+                    </td>
+                  ))}
+                  <td className="num muted">{gdOf(r) == null ? '' : gdOf(r) > 0 ? `+${gdOf(r)}` : gdOf(r)}</td>
                   <td className="num">
-                    <input className="stat-input" type="number" value={r.points} placeholder="0" onChange={(e) => update(r.k, 'points', e.target.value)} />
+                    <input
+                      className="stat-input narrow"
+                      type="number"
+                      value={r.points}
+                      placeholder={pointsOf(r) != null ? String(pointsOf(r)) : '0'}
+                      onChange={(e) => update(r.k, 'points', e.target.value)}
+                      aria-label="points"
+                    />
                   </td>
                   <td className="num">
                     <button type="button" className="btn danger small" onClick={() => setRows((rs) => rs.filter((x) => x.k !== r.k))} aria-label="Remove team">✕</button>

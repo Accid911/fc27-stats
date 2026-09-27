@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { loadAll, buildModel, playerStats, seasonLabel, statusText, formatMoney, STATUS_BADGE, MOVE_LABEL } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
+import Fixture from '@/components/Fixture';
 import DemoNotice from '@/components/DemoNotice';
 
 export const dynamic = 'force-dynamic';
@@ -115,15 +116,14 @@ export default async function PlayerPage({ params }) {
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Season</th><th>Tournament</th><th>Opponent</th><th className="num">Score</th><th></th><th className="num">Rating</th><th className="num">G</th><th className="num">A</th><th></th></tr>
+                  <tr><th>Season</th><th>Tournament</th><th>Match</th><th></th><th className="num">Rating</th><th className="num">G</th><th className="num">A</th><th></th></tr>
                 </thead>
                 <tbody>
                   {log.map(({ m, r }) => (
                     <tr key={m.id} className={r.potm ? 'is-potm' : ''}>
                       <td className="muted">S{m.season.number}</td>
                       <td className="muted">{m.tournament || '—'}</td>
-                      <td><Link href={`/matches/${m.id}`}>{m.opponent}</Link></td>
-                      <td className="num" style={{ fontWeight: 700 }}>{m.goals_for} – {m.goals_against}</td>
+                      <td><Fixture m={m} clubName={model.clubName} href={`/matches/${m.id}`} /></td>
                       <td><span className={`result ${m.result}`}>{m.result}</span></td>
                       <td className="num" style={{ fontWeight: 700 }}>{r.rating != null ? Number(r.rating).toFixed(1) : '—'}</td>
                       <td className="num">{r.goals || ''}</td>

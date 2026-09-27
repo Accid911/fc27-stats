@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { buildModel, isClub, matchResult, seasonLabel, seasonTournaments, STATUS_LABEL } from '@/lib/data';
+import { buildModel, isClub, matchResult, seasonLabel, seasonTournaments, fixtureText, STATUS_LABEL } from '@/lib/data';
+import Fixture from '@/components/Fixture';
 import { positionOrder } from '@/lib/constants';
 
 export default function MatchEditor({ data, seasonId, api, onChanged }) {
@@ -13,7 +14,7 @@ export default function MatchEditor({ data, seasonId, api, onChanged }) {
   const matches = model.matches.filter((m) => m.season_id === seasonId).reverse();
 
   async function remove(m) {
-    if (!window.confirm(`Delete ${m.goals_for}–${m.goals_against} vs ${m.opponent}? This can't be undone.`)) return;
+    if (!window.confirm(`Delete ${fixtureText(m, model.clubName)}? This can't be undone.`)) return;
     try {
       await api.remove('matches', m.id);
       await onChanged();
@@ -52,7 +53,7 @@ export default function MatchEditor({ data, seasonId, api, onChanged }) {
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Tournament</th><th>Opponent</th><th>Score</th><th className="num">Players</th><th>POTM</th><th></th>
+                <th>#</th><th>Tournament</th><th>Match</th><th></th><th className="num">Players</th><th>POTM</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -65,8 +66,8 @@ export default function MatchEditor({ data, seasonId, api, onChanged }) {
                   <tr key={m.id}>
                     <td className="muted">{matches.length - i}</td>
                     <td>{m.tournament || '—'}</td>
-                    <td style={{ fontWeight: 600 }}>{m.opponent}{m.venue ? <span className="muted"> ({m.venue})</span> : null}</td>
-                    <td><b>{m.goals_for} – {m.goals_against}</b> <span className={`result ${m.result}`}>{m.result}</span></td>
+                    <td><Fixture m={m} clubName={model.clubName} /></td>
+                    <td><span className={`result ${m.result}`}>{m.result}</span></td>
                     <td className="num">{m.lineup.length}</td>
                     <td>{potm ? model.playerById[potm.player_id]?.name : '—'}</td>
                     <td className="num">
@@ -95,6 +96,8 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
     opponent: initial.opponent ?? '',
     goals_for: initial.goals_for ?? 0,
     goals_against: initial.goals_against ?? 0,
+    pens_for: initial.pens_for ?? '',
+    pens_against: initial.pens_against ?? '',
     venue: initial.venue ?? '',
     played_on: initial.played_on ?? '',
     video_url: initial.video_url ?? '',
@@ -165,12 +168,21 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
   }
 
   const gf = Number(m.goals_for) || 0;
+  const ga = Number(m.goals_against) || 0;
+  // Penalties only for a drawn cup match (not the league)
+  const isCup = m.tournament && m.tournament !== model.seasonById[m.season_id]?.tournament;
+  const showPens = isCup && gf === ga;
+  const pensGiven = showPens && (m.pens_for !== '' || m.pens_against !== '');
   const totalGoals = rows.reduce((a, r) => a + (Number(r.goals) || 0), 0);
   const totalAssists = rows.reduce((a, r) => a + (Number(r.assists) || 0), 0);
   const problems = [];
   if (totalGoals > gf) problems.push(`Players have ${totalGoals} goals, but the score says ${gf}.`);
   if (totalAssists > gf) problems.push(`Players have ${totalAssists} assists, but only ${gf} goals were scored.`);
   if (rows.some((r) => r.rating !== '' && (Number(r.rating) < 0 || Number(r.rating) > 10))) problems.push('Ratings must be between 0 and 10.');
+  if (pensGiven) {
+    if (m.pens_for === '' || m.pens_against === '') problems.push('Fill in both penalty scores (or leave both empty).');
+    else if (Number(m.pens_for) === Number(m.pens_against)) problems.push('A penalty shoot-out can’t end level.');
+  }
   const ownGoals = gf - totalGoals;
 
   async function save(e) {
@@ -186,7 +198,9 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
           ...m,
           opponent: m.opponent.trim(),
           goals_for: gf,
-          goals_against: Number(m.goals_against) || 0,
+          goals_against: ga,
+          pens_for: pensGiven ? Number(m.pens_for) : null,
+          pens_against: pensGiven ? Number(m.pens_against) : null,
         },
         rows.map((r) => ({
           player_id: r.player_id,
@@ -196,8 +210,15 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
           potm: r.player_id === potm,
         }))
       );
-      const res = matchResult({ goals_for: gf, goals_against: Number(m.goals_against) || 0 });
-      await onSaved(`Saved ✓ ${res} ${gf}–${m.goals_against} vs ${m.opponent.trim()}`);
+      const saved = {
+        ...m,
+        opponent: m.opponent.trim(),
+        goals_for: gf,
+        goals_against: ga,
+        pens_for: pensGiven ? Number(m.pens_for) : null,
+        pens_against: pensGiven ? Number(m.pens_against) : null,
+      };
+      await onSaved(`Saved ✓ ${matchResult(saved)} · ${fixtureText(saved, model.clubName)}`);
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -242,13 +263,32 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
           </label>
         </div>
 
-        <div className="scoreline">
-          <span className="team">{model.clubName}</span>
-          <input type="number" min="0" value={m.goals_for} onChange={(e) => set('goals_for', e.target.value)} aria-label="Goals for" />
-          <span className="dash">–</span>
-          <input type="number" min="0" value={m.goals_against} onChange={(e) => set('goals_against', e.target.value)} aria-label="Goals against" />
-          <span className="team">{m.opponent || 'Opponent'}</span>
-        </div>
+        {(() => {
+          // Home team on the left: when Leicester play away the opponent comes first.
+          const club = { name: model.clubName, g: 'goals_for', p: 'pens_for', label: model.clubName };
+          const opp = { name: m.opponent || 'Opponent', g: 'goals_against', p: 'pens_against', label: 'opponent' };
+          const [L, R] = m.venue === 'A' ? [opp, club] : [club, opp];
+          return (
+            <>
+              <div className="scoreline">
+                <span className="team">{L.name}</span>
+                <input type="number" min="0" value={m[L.g]} onChange={(e) => set(L.g, e.target.value)} aria-label={`Goals ${L.label}`} />
+                <span className="dash">–</span>
+                <input type="number" min="0" value={m[R.g]} onChange={(e) => set(R.g, e.target.value)} aria-label={`Goals ${R.label}`} />
+                <span className="team">{R.name}</span>
+              </div>
+              {showPens && (
+                <div className="pens-row">
+                  <span>Penalties?</span>
+                  <input type="number" min="0" value={m[L.p]} onChange={(e) => set(L.p, e.target.value)} placeholder="–" aria-label={`Penalties ${L.label}`} />
+                  <span>–</span>
+                  <input type="number" min="0" value={m[R.p]} onChange={(e) => set(R.p, e.target.value)} placeholder="–" aria-label={`Penalties ${R.label}`} />
+                  <span style={{ fontSize: 12 }}>Leave empty if there was no shoot-out</span>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         <details style={{ marginTop: 8 }}>
           <summary className="muted" style={{ cursor: 'pointer' }}>More (date, video link, notes)</summary>

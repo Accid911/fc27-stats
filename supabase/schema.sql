@@ -36,6 +36,8 @@ create table if not exists matches (
   opponent text not null,
   goals_for int not null default 0,
   goals_against int not null default 0,
+  pens_for int,                                     -- penalty shoot-out (cup draws only)
+  pens_against int,
   venue text check (venue in ('H','A','N')),
   played_on date,
   video_url text,
@@ -72,6 +74,8 @@ create table if not exists standings (
   season_id uuid not null references seasons(id) on delete cascade,
   team text not null,
   points int not null default 0,
+  won int, drawn int, lost int,
+  gf int, ga int,
   unique (season_id, team)
 );
 
@@ -127,13 +131,15 @@ begin
   if not is_admin() then raise exception 'Only admins can save matches'; end if;
 
   if v_id is null then
-    insert into matches (season_id, tournament, opponent, goals_for, goals_against, venue, played_on, video_url, notes)
+    insert into matches (season_id, tournament, opponent, goals_for, goals_against, pens_for, pens_against, venue, played_on, video_url, notes)
     values (
       (p_match->>'season_id')::uuid,
       nullif(p_match->>'tournament', ''),
       p_match->>'opponent',
       coalesce(nullif(p_match->>'goals_for', '')::int, 0),
       coalesce(nullif(p_match->>'goals_against', '')::int, 0),
+      nullif(p_match->>'pens_for', '')::int,
+      nullif(p_match->>'pens_against', '')::int,
       nullif(p_match->>'venue', ''),
       nullif(p_match->>'played_on', '')::date,
       nullif(p_match->>'video_url', ''),
@@ -147,6 +153,8 @@ begin
       opponent      = p_match->>'opponent',
       goals_for     = coalesce(nullif(p_match->>'goals_for', '')::int, 0),
       goals_against = coalesce(nullif(p_match->>'goals_against', '')::int, 0),
+      pens_for      = nullif(p_match->>'pens_for', '')::int,
+      pens_against  = nullif(p_match->>'pens_against', '')::int,
       venue         = nullif(p_match->>'venue', ''),
       played_on     = nullif(p_match->>'played_on', '')::date,
       video_url     = nullif(p_match->>'video_url', ''),
@@ -195,8 +203,10 @@ begin
     delete from standings where season_id = v_id;
   end if;
 
-  insert into standings (season_id, team, points)
-  select v_id, trim(x->>'team'), coalesce(nullif(x->>'points', '')::int, 0)
+  insert into standings (season_id, team, points, won, drawn, lost, gf, ga)
+  select v_id, trim(x->>'team'), coalesce(nullif(x->>'points', '')::int, 0),
+         nullif(x->>'won', '')::int, nullif(x->>'drawn', '')::int, nullif(x->>'lost', '')::int,
+         nullif(x->>'gf', '')::int, nullif(x->>'ga', '')::int
   from jsonb_array_elements(coalesce(p_teams, '[]'::jsonb)) x
   where trim(coalesce(x->>'team', '')) <> '';
 

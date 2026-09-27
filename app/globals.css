@@ -207,3 +207,22 @@ tr.is-club td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
   .hero { padding: 20px; }
   th, td { padding: 8px 10px; }
 }
+
+/* Fixtures: home team first */
+.fixture { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; color: var(--text); }
+.fixture .fx-team { font-weight: 500; }
+.fixture .fx-club { font-weight: 700; }
+.fixture .fx-score { font-weight: 800; font-variant-numeric: tabular-nums; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0 7px; }
+.fixture .fx-pens { color: var(--muted); font-size: 12px; }
+a.fixture:hover .fx-team, a.fixture:hover .fx-club { color: var(--accent); }
+td a.fixture { font-weight: inherit; }
+.pens-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; font-size: 14px; color: var(--muted); }
+.pens-row input { width: 56px; text-align: center; font-weight: 700; padding: 5px; }
+
+.stat-input.narrow { width: 56px; }
+/* In tables, line fixtures up: home right-aligned | score | away */
+td .fixture { display: grid; grid-template-columns: 150px 56px 150px auto; gap: 8px; align-items: baseline; }
+td .fixture .fx-score { text-align: center; }
+@media (max-width: 600px) { td .fixture { grid-template-columns: 110px 50px 110px auto; } }
+td .fixture > :first-child { text-align: right; overflow: hidden; text-overflow: ellipsis; }
+td .fixture > :nth-child(3) { overflow: hidden; text-overflow: ellipsis; }

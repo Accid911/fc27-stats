@@ -42,7 +42,7 @@ export default async function SeasonPage({ params }) {
       )}
       {season.notes && <p className="muted" style={{ marginTop: 14 }}>{season.notes}</p>}
 
-      <section className="section grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}>
+      <section className="section grid" style={{ gridTemplateColumns: 'minmax(0, 1fr)', alignItems: 'start' }}>
         <div>
           <h2>{season.tournament} table</h2>
           <div className="card pad-0">
@@ -51,12 +51,25 @@ export default async function SeasonPage({ params }) {
             ) : (
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th className="num">#</th><th>Team</th><th className="num">Pts</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th className="num">#</th><th>Team</th>
+                      <th className="num">P</th><th className="num">W</th><th className="num">D</th><th className="num">L</th>
+                      <th className="num">GF</th><th className="num">GA</th><th className="num">GD</th><th className="num">Pts</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {table.rows.map((t) => (
                       <tr key={t.id} className={t.club ? 'is-club' : ''}>
                         <td className="num muted">{t.pos}</td>
                         <td style={{ fontWeight: t.club ? 700 : 500 }}>{t.team}</td>
+                        <td className="num muted">{t.played ?? '—'}</td>
+                        <td className="num">{t.won ?? '—'}</td>
+                        <td className="num">{t.drawn ?? '—'}</td>
+                        <td className="num">{t.lost ?? '—'}</td>
+                        <td className="num">{t.gf ?? '—'}</td>
+                        <td className="num">{t.ga ?? '—'}</td>
+                        <td className="num">{t.gd == null ? '—' : t.gd > 0 ? `+${t.gd}` : t.gd}</td>
                         <td className="num" style={{ fontWeight: 700 }}>{t.points}</td>
                       </tr>
                     ))}
@@ -141,7 +154,7 @@ export default async function SeasonPage({ params }) {
       <section className="section">
         <h2>Matches</h2>
         <div className="card pad-0">
-          <MatchTable matches={[...matches].reverse()} playerById={model.playerById} />
+          <MatchTable matches={[...matches].reverse()} playerById={model.playerById} clubName={model.clubName} />
         </div>
       </section>
     </>

@@ -5,7 +5,7 @@ import {
   buildModel, formatMoney, parseMoney, seasonLabel, statusText,
   MOVE_LABEL, STATUS_BADGE, STATUS_LABEL,
 } from '@/lib/data';
-import { COUNTRIES, POSITIONS, positionOrder } from '@/lib/constants';
+import { COUNTRIES, POSITIONS, capitalizeName, positionOrder } from '@/lib/constants';
 
 const STATUS_ORDER = { squad: 0, loan: 1, sold: 2, released: 3 };
 
@@ -87,9 +87,9 @@ function QuickAdd({ api, onChanged }) {
     setBusy(true);
     setError('');
     try {
-      await api.save('players', { name: f.name.trim(), position: f.position || null, country: f.country.trim() || null });
+      await api.save('players', { name: capitalizeName(f.name.trim()), position: f.position || null, country: capitalizeName(f.country.trim()) || null });
       await onChanged();
-      setMsg(`Added ${f.name.trim()} ✓`);
+      setMsg(`Added ${capitalizeName(f.name.trim())} ✓`);
       setF((x) => ({ ...blank, position: x.position, country: '' }));
       nameRef.current?.focus();
     } catch (err) {
@@ -106,7 +106,7 @@ function QuickAdd({ api, onChanged }) {
         {msg && <span style={{ color: 'var(--win)', fontSize: 14 }}>{msg}</span>}
       </div>
       <div className="form-grid">
-        <label>Name *<input ref={nameRef} value={f.name} onChange={(e) => { setMsg(''); setF({ ...f, name: e.target.value }); }} required /></label>
+        <label>Name *<input ref={nameRef} value={f.name} onChange={(e) => { setMsg(''); setF({ ...f, name: capitalizeName(e.target.value) }); }} required /></label>
         <label>
           Position *
           <select value={f.position} onChange={(e) => setF({ ...f, position: e.target.value })} required>
@@ -141,7 +141,7 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
     setBusy(true);
     setError('');
     try {
-      await api.save('players', { id: player.id, name: f.name.trim(), position: f.position || null, country: f.country.trim() || null });
+      await api.save('players', { id: player.id, name: capitalizeName(f.name.trim()), position: f.position || null, country: capitalizeName(f.country.trim()) || null });
       await onChanged();
       setMsg('Details saved ✓');
     } catch (err) {
@@ -191,7 +191,7 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
       <form className="card" onSubmit={saveDetails}>
         <h3 style={{ marginBottom: 12 }}>Details</h3>
         <div className="form-grid">
-          <label>Name *<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required /></label>
+          <label>Name *<input value={f.name} onChange={(e) => setF({ ...f, name: capitalizeName(e.target.value) })} required /></label>
           <label>
             Position
             <select value={f.position} onChange={(e) => setF({ ...f, position: e.target.value })}>
