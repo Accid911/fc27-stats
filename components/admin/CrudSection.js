@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 /**
  * Generic add/edit/delete panel.
  * fields: [{ key, label, type: 'text'|'number'|'date'|'select'|'checkbox'|'textarea'|'url', options?: [{value,label}], required?, wide? }]
  * columns: [{ key, label, render?(row) }] for the list below the form
  */
-export default function CrudSection({ title, table, fields, columns, rows, api, onChanged, defaults = {}, itemName = 'item' }) {
+export default function CrudSection({ title, table, fields, columns, rows, api, onChanged, defaults = {}, itemName = 'item', deleteWarning = '' }) {
+  const formRef = useRef(null);
   const blank = () => Object.fromEntries(fields.map((f) => [f.key, defaults[f.key] ?? (f.type === 'checkbox' ? true : '')]));
   const [form, setForm] = useState(blank);
   const [editingId, setEditingId] = useState(null);
@@ -47,6 +48,7 @@ export default function CrudSection({ title, table, fields, columns, rows, api, 
       await api.save(table, row);
       reset();
       await onChanged();
+      formRef.current?.querySelector('input, select')?.focus();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -55,7 +57,7 @@ export default function CrudSection({ title, table, fields, columns, rows, api, 
   }
 
   async function remove(row) {
-    if (!window.confirm(`Delete this ${itemName}? This can't be undone.`)) return;
+    if (!window.confirm(`Delete this ${itemName}? ${deleteWarning}This can't be undone.`)) return;
     setError('');
     try {
       await api.remove(table, row.id);
@@ -68,7 +70,7 @@ export default function CrudSection({ title, table, fields, columns, rows, api, 
 
   return (
     <>
-      <form className="card" onSubmit={submit}>
+      <form className="card" onSubmit={submit} ref={formRef}>
         <div className="row" style={{ marginBottom: 14 }}>
           <h3>{editingId ? `Edit ${itemName}` : `Add ${itemName}`}</h3>
           <span className="spacer" />
@@ -137,7 +139,17 @@ export function Field({ field: f, value, onChange }) {
   } else if (f.type === 'textarea') {
     input = <textarea rows={3} {...common} />;
   } else {
-    input = <input type={f.type || 'text'} step={f.step} {...common} />;
+    const listId = f.suggestions ? `dl-${f.key}` : undefined;
+    input = (
+      <>
+        <input type={f.type || 'text'} step={f.step} min={f.min} max={f.max} list={listId} autoComplete="off" {...common} />
+        {listId && (
+          <datalist id={listId}>
+            {f.suggestions.map((o) => <option key={o} value={o} />)}
+          </datalist>
+        )}
+      </>
+    );
   }
   return (
     <label className={f.wide ? 'wide' : ''}>

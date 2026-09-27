@@ -1,57 +1,63 @@
--- FC27 Leicester City Youth Career — Supabase schema (fresh install)
+-- Migration 002 — Leicester City youth career
+-- For a database that already ran the FIRST version of schema.sql.
+-- Keeps your existing players, seasons and matches. Removes the old
+-- per-season stats table (stats are now calculated from match line-ups).
 -- Run once in Supabase → SQL Editor → New query → Run.
--- Already ran the first version? Run migrations/002-leicester-youth.sql instead.
 
-create table if not exists settings (
-  id int primary key default 1 check (id = 1),
-  club_name text not null default 'Leicester City',
-  creator_name text,
-  tagline text,
-  youtube_url text
-);
-insert into settings (id) values (1) on conflict do nothing;
+-- ── Players: name, position, age, country ──
+alter table players add column if not exists age int;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'nationality') then
+    alter table players rename column nationality to country;
+  end if;
+end $$;
+alter table players add column if not exists country text;
+alter table players
+  drop column if exists shirt_number,
+  drop column if exists overall,
+  drop column if exists potential,
+  drop column if exists notes;
 
-create table if not exists seasons (
-  id uuid primary key default gen_random_uuid(),
-  number int not null unique,                       -- Season 1, 2, 3…
-  tournament text not null default 'Premier League', -- the league played that season
-  notes text,
-  created_at timestamptz default now()
-);
+-- ── Seasons: number + tournament ──
+alter table seasons add column if not exists number int;
+alter table seasons add column if not exists tournament text;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'seasons' and column_name = 'start_year') then
+    execute 'update seasons s set number = x.rn from (select id, row_number() over (order by start_year, created_at) rn from seasons) x where s.id = x.id and s.number is null';
+    execute 'update seasons set tournament = coalesce(tournament, league, ''Premier League'')';
+  end if;
+end $$;
+update seasons set tournament = 'Premier League' where tournament is null;
+alter table seasons alter column number set not null;
+alter table seasons alter column tournament set not null;
+alter table seasons alter column tournament set default 'Premier League';
+alter table seasons
+  drop column if exists name,
+  drop column if exists start_year,
+  drop column if exists club,
+  drop column if exists league,
+  drop column if exists league_position;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'seasons_number_key') then
+    alter table seasons add constraint seasons_number_key unique (number);
+  end if;
+end $$;
 
-create table if not exists players (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  position text,
-  age int,
-  country text,
-  is_active boolean not null default true,          -- still in the squad?
-  created_at timestamptz default now()
-);
+-- ── Matches: tournament + entry order ──
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'matches' and column_name = 'competition') then
+    alter table matches rename column competition to tournament;
+  end if;
+end $$;
+alter table matches add column if not exists created_at timestamptz default now();
+alter table matches alter column venue drop default;
 
-create table if not exists matches (
-  id uuid primary key default gen_random_uuid(),
-  season_id uuid not null references seasons(id) on delete cascade,
-  tournament text,
-  opponent text not null,
-  goals_for int not null default 0,
-  goals_against int not null default 0,
-  venue text check (venue in ('H','A','N')),
-  played_on date,
-  video_url text,
-  notes text,
-  created_at timestamptz default now()
-);
+-- ── Old per-season stats are replaced by match line-ups ──
+drop table if exists player_season_stats cascade;
 
-create table if not exists trophies (
-  id uuid primary key default gen_random_uuid(),
-  season_id uuid not null references seasons(id) on delete cascade,
-  name text not null
-);
-
-create table if not exists admins (
-  email text primary key
-);
+-- ── Club ──
+alter table settings alter column club_name set default 'Leicester City';
+update settings set club_name = 'Leicester City' where id = 1;
 
 create table if not exists standings (
   id uuid primary key default gen_random_uuid(),
@@ -188,10 +194,3 @@ revoke execute on function save_match(jsonb, jsonb) from public, anon;
 revoke execute on function save_season(jsonb, jsonb) from public, anon;
 grant execute on function save_match(jsonb, jsonb) to authenticated;
 grant execute on function save_season(jsonb, jsonb) to authenticated;
-
--- ───────────────────────── Admins ─────────────────────────
--- Emails allowed to edit (you + the creator). Edit later in Table Editor → admins.
-insert into admins (email) values
-  ('accidnineoneone@gmail.com'),
-  ('creator@example.com')
-on conflict do nothing;

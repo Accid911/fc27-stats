@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 /**
- * columns: [{ key, label, num?: bool, href?: string (row field holding a URL) }]
+ * columns: [{ key, label, num?: bool, decimals?: number, href?: string (row field holding a URL) }]
  * rows: plain objects
  */
 export default function SortableTable({ columns, rows, defaultSort, defaultDir = 'desc', rank = false }) {
@@ -59,7 +59,7 @@ export default function SortableTable({ columns, rows, defaultSort, defaultDir =
               {rank && <td className="num muted">{i + 1}</td>}
               {columns.map((c) => {
                 const v = r[c.key];
-                const content = v == null || v === '' ? '—' : v;
+                const content = v == null || v === '' ? '—' : c.decimals != null && typeof v === 'number' ? v.toFixed(c.decimals) : v;
                 return (
                   <td key={c.key} className={c.num ? 'num' : ''}>
                     {c.href && r[c.href] ? <Link href={r[c.href]}>{content}</Link> : content}

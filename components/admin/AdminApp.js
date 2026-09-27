@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabase } from '@/lib/supabase';
 import { makeApi } from '@/lib/admin-api';
-import { sortSeasons, matchResult } from '@/lib/data';
+import { seasonLabel } from '@/lib/data';
+import { COUNTRIES, POSITIONS, TOURNAMENTS, positionOrder } from '@/lib/constants';
 import CrudSection, { Field } from './CrudSection';
-import StatsEditor from './StatsEditor';
+import MatchEditor from './MatchEditor';
+import SeasonEditor from './SeasonEditor';
 
-const TABS = ['Player stats', 'Matches', 'Trophies', 'Seasons', 'Players', 'Site settings'];
+const TABS = ['Matches', 'Players', 'Seasons', 'Trophies', 'Site settings'];
 
 export default function AdminApp() {
   const sb = getSupabase();
@@ -94,17 +96,28 @@ function Dashboard({ api, email, onSignOut }) {
     reload();
   }, [reload]);
 
-  const seasons = useMemo(() => (data ? sortSeasons(data.seasons) : []), [data]);
+  const seasons = useMemo(() => (data ? [...data.seasons].sort((a, b) => b.number - a.number) : []), [data]);
   useEffect(() => {
     if (seasons.length && !seasons.some((s) => s.id === seasonId)) setSeasonId(seasons[0].id);
   }, [seasons, seasonId]);
 
-  if (error && !data) return <div className="error">Couldn’t load data: {error}</div>;
+  if (error && !data) {
+    return (
+      <div className="error">
+        Couldn’t load data: {error}
+        {/does not exist|schema cache/.test(error) && (
+          <p style={{ marginBottom: 0 }}>
+            Looks like the database hasn’t been upgraded yet — run <code>supabase/migrations/002-leicester-youth.sql</code> in the Supabase SQL Editor.
+          </p>
+        )}
+      </div>
+    );
+  }
   if (!data) return <p className="muted">Loading…</p>;
 
-  const seasonOptions = seasons.map((s) => ({ value: s.id, label: s.name }));
-  const seasonName = (id) => data.seasons.find((s) => s.id === id)?.name || '—';
-  const needsSeason = ['Player stats', 'Matches', 'Trophies'].includes(tab);
+  const seasonOptions = seasons.map((s) => ({ value: s.id, label: seasonLabel(s) }));
+  const seasonName = (id) => seasonLabel(data.seasons.find((s) => s.id === id));
+  const needsSeason = ['Matches', 'Trophies'].includes(tab);
 
   return (
     <>
@@ -116,7 +129,7 @@ function Dashboard({ api, email, onSignOut }) {
       <div className="row" style={{ marginBottom: 20 }}>
         <div>
           <div className="eyebrow">Admin</div>
-          <h1 style={{ fontSize: 36 }}>Manage stats</h1>
+          <h1 style={{ fontSize: 36 }}>Manage the career</h1>
         </div>
         <span className="spacer" />
         {email && <span className="muted">{email}</span>}
@@ -129,9 +142,12 @@ function Dashboard({ api, email, onSignOut }) {
         ))}
       </div>
 
-      {needsSeason && (
-        seasons.length === 0 ? (
-          <div className="notice">Create a season first in the <b>Seasons</b> tab.</div>
+      {needsSeason &&
+        (seasons.length === 0 ? (
+          <div className="notice">
+            Create a season first in the{' '}
+            <button className="linkish" onClick={() => setTab('Seasons')}>Seasons</button> tab.
+          </div>
         ) : (
           <div className="row" style={{ marginBottom: 16 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -141,49 +157,49 @@ function Dashboard({ api, email, onSignOut }) {
               </select>
             </label>
           </div>
+        ))}
+
+      {tab === 'Matches' && seasonId && (
+        data.players.length === 0 ? (
+          <div className="notice">
+            Add some players first in the{' '}
+            <button className="linkish" onClick={() => setTab('Players')}>Players</button> tab.
+          </div>
+        ) : (
+          <MatchEditor key={seasonId} data={data} seasonId={seasonId} api={api} onChanged={reload} />
         )
       )}
 
-      {tab === 'Player stats' && seasonId && (
-        <StatsEditor data={data} seasonId={seasonId} api={api} onChanged={reload} />
-      )}
-
-      {tab === 'Matches' && seasonId && (
+      {tab === 'Players' && (
         <CrudSection
-          key={`m-${seasonId}`}
-          title="Matches"
-          itemName="match"
-          table="matches"
+          title="Players"
+          itemName="player"
+          table="players"
           api={api}
           onChanged={reload}
-          defaults={{ season_id: seasonId, venue: 'H', competition: 'League', goals_for: 0, goals_against: 0 }}
-          rows={data.matches
-            .filter((m) => m.season_id === seasonId)
-            .sort((a, b) => String(b.played_on || '').localeCompare(String(a.played_on || '')))}
+          deleteWarning="Their match stats will be deleted too — to keep them, untick “In squad” instead. "
+          rows={[...data.players].sort(
+            (a, b) => Number(b.is_active) - Number(a.is_active) || positionOrder(a.position) - positionOrder(b.position) || a.name.localeCompare(b.name)
+          )}
           fields={[
-            { key: 'season_id', label: 'Season', type: 'select', options: seasonOptions, required: true },
-            { key: 'played_on', label: 'Date', type: 'date' },
-            { key: 'competition', label: 'Competition' },
-            { key: 'opponent', label: 'Opponent', required: true },
-            { key: 'venue', label: 'Venue', type: 'select', required: true, options: [
-              { value: 'H', label: 'Home' }, { value: 'A', label: 'Away' }, { value: 'N', label: 'Neutral' },
-            ] },
-            { key: 'goals_for', label: 'Goals for', type: 'number', required: true },
-            { key: 'goals_against', label: 'Goals against', type: 'number', required: true },
-            { key: 'video_url', label: 'YouTube link', type: 'url', wide: true },
-            { key: 'notes', label: 'Notes', type: 'textarea', wide: true },
+            { key: 'name', label: 'Name', required: true },
+            { key: 'position', label: 'Position', type: 'select', required: true, options: POSITIONS.map((p) => ({ value: p, label: p })) },
+            { key: 'age', label: 'Age', type: 'number', min: 14, max: 45 },
+            { key: 'country', label: 'Country', suggestions: COUNTRIES },
+            { key: 'is_active', label: 'In squad', type: 'checkbox' },
           ]}
+          defaults={{ position: 'ST' }}
           columns={[
-            { key: 'played_on', label: 'Date' },
-            { key: 'competition', label: 'Comp' },
-            { key: 'opponent', label: 'Opponent' },
-            { key: 'venue', label: 'H/A' },
-            { key: 'score', label: 'Score', render: (m) => (
-              <><b>{m.goals_for} – {m.goals_against}</b> <span className={`result ${matchResult(m)}`}>{matchResult(m)}</span></>
-            ) },
+            { key: 'name', label: 'Name' },
+            { key: 'position', label: 'Pos' },
+            { key: 'age', label: 'Age' },
+            { key: 'country', label: 'Country' },
+            { key: 'is_active', label: 'Status', render: (p) => (p.is_active ? <span className="badge green">Squad</span> : <span className="badge">Left</span>) },
           ]}
         />
       )}
+
+      {tab === 'Seasons' && <SeasonEditor data={data} api={api} onChanged={reload} />}
 
       {tab === 'Trophies' && seasonId && (
         <CrudSection
@@ -197,7 +213,7 @@ function Dashboard({ api, email, onSignOut }) {
           rows={data.trophies.filter((t) => t.season_id === seasonId)}
           fields={[
             { key: 'season_id', label: 'Season', type: 'select', options: seasonOptions, required: true },
-            { key: 'name', label: 'Trophy', required: true },
+            { key: 'name', label: 'Trophy', required: true, suggestions: TOURNAMENTS },
           ]}
           columns={[
             { key: 'name', label: 'Trophy' },
@@ -206,75 +222,9 @@ function Dashboard({ api, email, onSignOut }) {
         />
       )}
 
-      {tab === 'Seasons' && (
-        <CrudSection
-          title="Seasons"
-          itemName="season"
-          table="seasons"
-          api={api}
-          onChanged={reload}
-          defaults={nextSeasonDefaults(seasons)}
-          rows={seasons}
-          fields={[
-            { key: 'name', label: 'Name (e.g. 2026/27)', required: true },
-            { key: 'start_year', label: 'Start year', type: 'number', required: true },
-            { key: 'club', label: 'Club' },
-            { key: 'league', label: 'League' },
-            { key: 'league_position', label: 'League position', type: 'number' },
-            { key: 'notes', label: 'Notes', type: 'textarea', wide: true },
-          ]}
-          columns={[
-            { key: 'name', label: 'Season' },
-            { key: 'club', label: 'Club' },
-            { key: 'league', label: 'League' },
-            { key: 'league_position', label: 'Pos' },
-          ]}
-        />
-      )}
-
-      {tab === 'Players' && (
-        <CrudSection
-          title="Players"
-          itemName="player"
-          table="players"
-          api={api}
-          onChanged={reload}
-          rows={[...data.players].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.name.localeCompare(b.name))}
-          fields={[
-            { key: 'name', label: 'Name', required: true },
-            { key: 'position', label: 'Position', type: 'select', options: POSITIONS.map((p) => ({ value: p, label: p })) },
-            { key: 'nationality', label: 'Nationality' },
-            { key: 'shirt_number', label: 'Shirt #', type: 'number' },
-            { key: 'overall', label: 'Overall', type: 'number' },
-            { key: 'potential', label: 'Potential', type: 'number' },
-            { key: 'is_active', label: 'Currently in squad', type: 'checkbox' },
-            { key: 'notes', label: 'Notes', type: 'textarea', wide: true },
-          ]}
-          columns={[
-            { key: 'name', label: 'Name' },
-            { key: 'position', label: 'Pos' },
-            { key: 'nationality', label: 'Nation' },
-            { key: 'overall', label: 'OVR' },
-            { key: 'is_active', label: 'Status', render: (p) => (p.is_active ? <span className="badge green">Squad</span> : <span className="badge">Left</span>) },
-          ]}
-        />
-      )}
-
       {tab === 'Site settings' && <SettingsForm api={api} settings={data.settings} onChanged={reload} />}
     </>
   );
-}
-
-const POSITIONS = ['GK', 'RB', 'RWB', 'CB', 'LB', 'LWB', 'CDM', 'CM', 'CAM', 'RM', 'LM', 'RW', 'LW', 'CF', 'ST'];
-
-function nextSeasonDefaults(seasons) {
-  const last = seasons[0];
-  if (!last) {
-    const y = new Date().getFullYear();
-    return { start_year: y, name: `${y}/${String(y + 1).slice(2)}` };
-  }
-  const y = last.start_year + 1;
-  return { start_year: y, name: `${y}/${String(y + 1).slice(2)}`, club: last.club || '', league: last.league || '' };
 }
 
 function SettingsForm({ api, settings, onChanged }) {

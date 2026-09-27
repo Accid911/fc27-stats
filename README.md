@@ -1,9 +1,9 @@
-# FC27 Career Stats
+# Leicester City Youth — FC27 Career Stats
 
-A fan-made stats site for an FC27 Career Mode series.
+A fan-made stats site for an FC27 Career Mode series: Leicester City, academy players only.
 
-- **Public site** — overview, seasons, players, trophies. Anyone can view.
-- **Admin (`/admin`)** — you and the creator sign in to add seasons, players, per-season player stats, matches and trophies.
+- **Public site** — overview with records and leaderboards, seasons (with league tables), matches (with line-ups), players. Anyone can view.
+- **Admin (`/admin`)** — you and the creator sign in to add players, seasons and matches. All player stats are calculated from the match line-ups.
 
 Built with **Next.js** + **Supabase** (free Postgres + login), hosted on **Vercel**.
 
@@ -30,11 +30,17 @@ git branch -M main
 git push -u origin main
 ```
 
+## Upgrading an existing database
+
+Already set up the database with the first version? Run
+[`supabase/migrations/002-leicester-youth.sql`](supabase/migrations/002-leicester-youth.sql)
+once in **SQL Editor → New query → Run**. It keeps your players, seasons and matches.
+
 ## 3. Set up Supabase (the database)
 
 1. Create a free project at https://supabase.com.
 2. Open **SQL Editor → New query**, paste everything from [`supabase/schema.sql`](supabase/schema.sql).
-   **Before running**, replace `you@example.com` and `creator@example.com` at the bottom with the two real emails. Click **Run**.
+   **Before running**, check the two emails at the bottom (yours + the creator's). Click **Run**.
 3. **Authentication → Users → Add user → Create new user**: create an account for you and one for the creator (same emails as above, tick *Auto Confirm User*).
 4. **Authentication → Sign In / Providers**: turn **off** “Allow new users to sign up”, so nobody else can create an account.
 5. **Project Settings → API** (or *API Keys*): copy the **Project URL** and the **publishable** (or legacy *anon*) key.
@@ -60,26 +66,33 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 | Table | What |
 |---|---|
 | `settings` | Club name, creator name, tagline, YouTube link |
-| `seasons` | Name (2026/27), club, league, final position, notes |
-| `players` | Name, position, nation, shirt #, OVR/POT, in squad or left |
-| `player_season_stats` | Apps, goals, assists, clean sheets, MOTM, cards, avg rating — per player per season |
-| `matches` | Date, competition, opponent, H/A, score, video link |
+| `players` | Name, position, age, country, still in squad or not |
+| `seasons` | Season number, league (tournament) name, notes |
+| `standings` | The league table for a season: team + points |
+| `matches` | Season, tournament, opponent, score, home/away, date, video link |
+| `match_players` | Who played in a match: rating, goals, assists, Player of the Match |
 | `trophies` | Trophy name per season |
+
+## Using the admin
+
+- **Players** — fill in name, position, age, country and press Enter. The form stays ready for the next player.
+- **Seasons** — *New season* pre-fills the next number and last season's teams. Type the points, or use **Paste a list** (`Arsenal 84` per line).
+- **Matches** — pick the opponent, type the score, click players to add them (or **Same players as last match**), then set each player's rating, goals (+/−), assists (+/−) and tap ★ for Player of the Match.
 
 ## Project structure
 
 ```
 app/                 pages (overview, seasons, players, admin)
 components/          tables, leaderboards, admin editors
-lib/data.js          loading + stat calculations
+lib/data.js          loading + all stat calculations (records, streaks, leaders)
 lib/admin-api.js     save/delete for the admin panel
 lib/demo-data.js     sample data for demo mode
-supabase/schema.sql  database setup
+supabase/schema.sql  database setup (fresh install)
+supabase/migrations/ upgrades for an existing database
 ```
 
 ## Ideas for next versions
 
-- Per-match player stats (goals/assists per game) instead of season totals
-- Transfers (in/out, fees) and youth academy tracking
-- Charts: goals per season, rating progression
-- Player photos / club badges
+- Player age history (age per season) and "academy graduate" dates
+- Rating progression chart per player
+- Player photos

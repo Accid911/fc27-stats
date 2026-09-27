@@ -1,33 +1,69 @@
 import Link from 'next/link';
-import { loadAll, careerTotals, record, sortSeasons, topBy, ordinal, sumStats } from '@/lib/data';
+import {
+  loadAll, buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook,
+  countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel,
+} from '@/lib/data';
 import Leaderboard from '@/components/Leaderboard';
 import DemoNotice from '@/components/DemoNotice';
+import { BarList, ColumnChart } from '@/components/Charts';
 
 export const dynamic = 'force-dynamic';
 
+const RUN = { W: 'win', D: 'draw', L: 'loss' };
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : /(s|x|ch|sh)$/.test(word) ? 'es' : 's'}`;
+
 export default async function Home() {
   const data = await loadAll();
-  const { settings, trophies, matches } = data;
-  const seasons = sortSeasons(data.seasons);
-  const totals = careerTotals(data);
-  const rec = record(matches);
-  const current = seasons[0];
-  const currentStats = current
-    ? data.player_season_stats
-        .filter((s) => s.season_id === current.id)
-        .map((s) => ({ ...s, ...data.players.find((p) => p.id === s.player_id), id: s.player_id }))
-    : [];
-  const currentRec = current ? record(matches.filter((m) => m.season_id === current.id)) : null;
-  const currentTop = topBy(currentStats, 'goals', 1)[0];
-  const allGoals = sumStats(data.player_season_stats).goals;
+  const model = buildModel(data);
+  const { settings } = data;
+  const rec = teamRecord(model.matches);
+  const run = streaks(model.matches);
+  const stats = playerStats(model);
+  const book = recordBook(model);
+  const last5 = model.matches.slice(-5);
+
+  const latest = model.seasons[model.seasons.length - 1];
+  const latestMatches = latest ? model.matches.filter((m) => m.season_id === latest.id) : [];
+  const latestRec = teamRecord(latestMatches);
+  const latestTable = latest ? leagueTable(model, latest.id) : null;
+  const latestStats = latest ? playerStats(model, latestMatches) : [];
+  const latestTop = topBy(latestStats, 'goals', 1)[0];
+  const latestBest = topBy(latestStats, 'avg_rating', 1, (p) => p.rated >= 3)[0];
+
+  const minApps = Math.max(3, Math.ceil(model.matches.length * 0.2));
+  const used = stats.filter((p) => p.apps > 0);
+  const squad = data.players.filter((p) => p.is_active);
+  const ages = squad.map((p) => p.age).filter((a) => a != null);
+  const avgAge = ages.length ? (ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(1) : '—';
+  const youngestScorer = [...stats].filter((p) => p.goals > 0 && p.age != null).sort((a, b) => a.age - b.age)[0];
+
+  const goalsBySeason = model.seasons.map((s) => {
+    const r = teamRecord(model.matches.filter((m) => m.season_id === s.id));
+    return { label: `S${s.number}`, value: r.GF, games: r.P };
+  });
+  const pointsBySeason = model.seasons
+    .map((s) => ({ s, t: leagueTable(model, s.id).club }))
+    .filter((x) => x.t)
+    .map(({ s, t }) => ({ label: `S${s.number}`, value: t.points, pos: t.pos, league: s.tournament }));
+
+  const byCountry = countBy(squad, (p) => p.country);
+  const countryRows = byCountry.length > 8
+    ? [...byCountry.slice(0, 7), { label: `Other (${byCountry.length - 7})`, value: byCountry.slice(7).reduce((a, r) => a + r.value, 0) }]
+    : byCountry;
+  const byGroup = Object.keys(POSITION_GROUPS).map((g) => ({
+    label: POSITION_GROUPS[g],
+    value: squad.filter((p) => positionGroup(p.position) === g).length,
+  }));
 
   return (
     <>
       <DemoNotice demo={data.demo} />
 
       <section className="card hero">
-        <div className="eyebrow">FC27 Career Mode{settings.creator_name ? ` · ${settings.creator_name}` : ''}</div>
-        <h1>{settings.club_name}</h1>
+        <div className="eyebrow" style={{ color: 'var(--gold)' }}>
+          FC27 Career Mode · Academy players only{settings.creator_name ? ` · ${settings.creator_name}` : ''}
+        </div>
+        <h1>{model.clubName}</h1>
         {settings.tagline && <p>{settings.tagline}</p>}
         {settings.youtube_url && (
           <div style={{ marginTop: 18 }}>
@@ -37,44 +73,142 @@ export default async function Home() {
       </section>
 
       <section className="section grid grid-kpi">
-        <Kpi value={seasons.length} label="Seasons" />
-        <Kpi value={trophies.length} label="Trophies" gold />
-        <Kpi value={`${rec.W}-${rec.D}-${rec.L}`} label="W-D-L (logged matches)" />
-        <Kpi value={allGoals} label="Player goals" />
-        <Kpi value={data.players.filter((p) => p.is_active).length} label="Players in squad" />
+        <Kpi value={model.seasons.length} label="Seasons" />
+        <Kpi value={rec.P} label="Matches" />
+        <Kpi value={`${rec.winPct}%`} label={`Win rate · ${rec.W}W ${rec.D}D ${rec.L}L`} />
+        <Kpi value={rec.GF} label={`Goals scored · ${rec.gpg} per game`} />
+        <Kpi value={rec.CS} label="Clean sheets" />
+        <Kpi value={used.length} label="Academy players used" />
+        <Kpi value={data.trophies.length} label="Trophies" gold />
       </section>
 
-      {current && (
-        <section className="section">
-          <div className="row" style={{ marginBottom: 14 }}>
-            <h2 style={{ margin: 0 }}>Latest season · {current.name}</h2>
-            <span className="spacer" />
-            <Link className="link" href={`/seasons/${current.id}`}>Full season →</Link>
-          </div>
-          <div className="grid grid-kpi">
-            <Kpi value={current.league || '—'} label={current.club || 'League'} small />
-            <Kpi value={ordinal(current.league_position)} label="League position" />
-            <Kpi value={`${currentRec.W}-${currentRec.D}-${currentRec.L}`} label="W-D-L" />
-            <Kpi value={currentTop ? currentTop.goals : '—'} label={currentTop ? `Top scorer: ${currentTop.name}` : 'Top scorer'} />
-          </div>
-        </section>
-      )}
-
       <section className="section grid grid-2">
-        <Leaderboard title="All-time top scorers" rows={topBy(totals, 'goals')} valueKey="goals" />
-        <Leaderboard title="All-time top assists" rows={topBy(totals, 'assists')} valueKey="assists" />
-        <Leaderboard title="Most appearances" rows={topBy(totals, 'appearances')} valueKey="appearances" />
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Form</h3>
+          {last5.length === 0 ? (
+            <p className="muted">No matches yet.</p>
+          ) : (
+            <>
+              <div className="form-strip">
+                {last5.map((m) => (
+                  <Link key={m.id} href={`/matches/${m.id}`} title={`${m.goals_for}–${m.goals_against} vs ${m.opponent}`}>
+                    <span className={`result lg ${m.result}`}>{m.result}</span>
+                  </Link>
+                ))}
+              </div>
+              <p className="muted" style={{ margin: '12px 0 0' }}>
+                Last {last5.length}, oldest → newest.
+                {run.current && run.current.count > 1 && (
+                  <> Currently on a <b style={{ color: 'var(--text)' }}>{run.current.count}-match {RUN[run.current.type]} run</b>.</>
+                )}
+              </p>
+            </>
+          )}
+        </div>
+
+        {latest ? (
+          <div className="card">
+            <div className="row" style={{ marginBottom: 12 }}>
+              <h3>Latest · {seasonLabel(latest)}</h3>
+              <span className="spacer" />
+              <Link className="link" href={`/seasons/${latest.id}`}>Full season →</Link>
+            </div>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 12 }}>
+              <Mini value={latestTable?.club ? ordinal(latestTable.club.pos) : '—'} label={latest.tournament} />
+              <Mini value={latestTable?.club ? latestTable.club.points : '—'} label="Points" />
+              <Mini value={`${latestRec.W}-${latestRec.D}-${latestRec.L}`} label="W-D-L" />
+              <Mini value={latestTop ? latestTop.goals : '—'} label={latestTop ? `Top scorer: ${latestTop.name}` : 'Top scorer'} />
+              <Mini value={latestBest ? latestBest.avg_rating : '—'} label={latestBest ? `Best rated: ${latestBest.name}` : 'Best rated'} />
+            </div>
+          </div>
+        ) : (
+          <div className="card"><p className="muted">No seasons yet.</p></div>
+        )}
+      </section>
+
+      <section className="section">
+        <h2>Record book</h2>
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <MatchRecord label="Biggest win" m={book.biggestWin} />
+          <MatchRecord label="Heaviest defeat" m={book.worstLoss} />
+          <MatchRecord label="Highest-scoring game" m={book.mostGoals} />
+          <Record label="Longest winning run" big={plural(run.bestWin, 'match')} sub="in a row" />
+          <Record label="Longest unbeaten run" big={plural(run.bestUnbeaten, 'match')} sub="without losing" />
+          <PlayerRecord label="Best match rating" r={book.bestRating} fmt={(v) => v.toFixed(1)} />
+          <PlayerRecord label="Most goals in one game" r={book.mostInGame} />
+          <Record
+            label="Hat-tricks"
+            big={book.hatTricks.length}
+            sub={book.hatTricks.length ? book.hatTricks.slice(-3).map((h) => h.player?.name).join(', ') : 'Still waiting…'}
+          />
+        </div>
+      </section>
+
+      <section className="section">
+        <h2>All-time leaders</h2>
+        <div className="grid grid-2">
+          <Leaderboard title="Top scorers" rows={topBy(stats, 'goals')} valueKey="goals" sub={(p) => `${p.apps} apps`} />
+          <Leaderboard title="Most assists" rows={topBy(stats, 'assists')} valueKey="assists" sub={(p) => `${p.apps} apps`} />
+          <Leaderboard title="Goal contributions (G+A)" rows={topBy(stats, 'ga')} valueKey="ga" sub={(p) => `${p.goals}G · ${p.assists}A`} />
+          <Leaderboard title="Player of the Match awards" rows={topBy(stats, 'potm')} valueKey="potm" sub={(p) => `${p.apps} apps`} />
+          <Leaderboard
+            title="Best average rating"
+            rows={topBy(stats, 'avg_rating', 5, (p) => p.rated >= minApps)}
+            valueKey="avg_rating"
+            format={(v) => v.toFixed(1)}
+            sub={(p) => `${p.rated} rated games`}
+            empty={`Needs ${minApps}+ rated games.`}
+          />
+          <Leaderboard title="Most appearances" rows={topBy(stats, 'apps')} valueKey="apps" sub={(p) => (p.age ? `Age ${p.age}` : '')} />
+        </div>
+      </section>
+
+      <section className="section">
+        <h2>By season</h2>
+        <div className="grid grid-2">
+          <div className="card">
+            <h3 style={{ marginBottom: 4 }}>Goals scored per season</h3>
+            <ColumnChart rows={goalsBySeason} tip={(r) => `${r.label}: ${r.value} goals in ${r.games} games`} />
+          </div>
+          <div className="card">
+            <h3 style={{ marginBottom: 4 }}>League points per season</h3>
+            <ColumnChart rows={pointsBySeason} tip={(r) => `${r.label}: ${r.value} pts · finished ${ordinal(r.pos)} in the ${r.league}`} />
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <h2>The academy squad</h2>
+        <div className="grid grid-kpi" style={{ marginBottom: 16 }}>
+          <Kpi value={squad.length} label="Players in squad" />
+          <Kpi value={avgAge} label="Average age" />
+          <Kpi value={byCountry.length} label="Countries" />
+          <Kpi value={youngestScorer ? youngestScorer.age : '—'} label={youngestScorer ? `Youngest scorer: ${youngestScorer.name}` : 'Youngest scorer'} />
+        </div>
+        <div className="grid grid-2">
+          <div className="card">
+            <h3 style={{ marginBottom: 12 }}>Where they’re from</h3>
+            <BarList rows={countryRows} tip={(r) => `${r.label}: ${plural(r.value, 'player')}`} />
+          </div>
+          <div className="card">
+            <h3 style={{ marginBottom: 12 }}>Squad by position</h3>
+            <BarList rows={byGroup} tip={(r) => `${r.label}: ${r.value}`} />
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
         <div className="card">
           <h3 style={{ marginBottom: 8 }}>Trophy cabinet</h3>
-          {trophies.length === 0 && <p className="muted">No silverware yet… give it time.</p>}
-          {sortSeasons(data.seasons).flatMap((s) =>
-            trophies
+          {data.trophies.length === 0 && <p className="muted">No silverware yet… give the kids time.</p>}
+          {[...model.seasons].reverse().flatMap((s) =>
+            data.trophies
               .filter((t) => t.season_id === s.id)
               .map((t) => (
                 <div className="leader" key={t.id}>
                   <span className="rank">🏆</span>
                   <span className="name">{t.name}</span>
-                  <Link className="badge gold" href={`/seasons/${s.id}`}>{s.name}</Link>
+                  <Link className="badge gold" href={`/seasons/${s.id}`}>{seasonLabel(s)}</Link>
                 </div>
               ))
           )}
@@ -84,11 +218,56 @@ export default async function Home() {
   );
 }
 
-function Kpi({ value, label, gold, small }) {
+function Kpi({ value, label, gold }) {
   return (
     <div className="card kpi">
-      <div className="value" style={{ color: gold ? 'var(--gold)' : undefined, fontSize: small ? 26 : undefined }}>{value}</div>
+      <div className="value" style={{ color: gold ? 'var(--gold)' : undefined }}>{value}</div>
       <div className="label">{label}</div>
+    </div>
+  );
+}
+
+function Mini({ value, label }) {
+  return (
+    <div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, lineHeight: 1 }}>{value}</div>
+      <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{label}</div>
+    </div>
+  );
+}
+
+function Record({ label, big, sub }) {
+  return (
+    <div className="card record-card">
+      <div className="label">{label}</div>
+      <div className="big">{big}</div>
+      <div className="sub">{sub}</div>
+    </div>
+  );
+}
+
+function MatchRecord({ label, m }) {
+  if (!m) return <Record label={label} big="—" sub="Not yet" />;
+  return (
+    <div className="card record-card">
+      <div className="label">{label}</div>
+      <div className="big">{m.goals_for}–{m.goals_against}</div>
+      <div className="sub">
+        vs <Link href={`/matches/${m.id}`}>{m.opponent}</Link> · {seasonLabel(m.season)}
+      </div>
+    </div>
+  );
+}
+
+function PlayerRecord({ label, r, fmt = (v) => v }) {
+  if (!r) return <Record label={label} big="—" sub="Not yet" />;
+  return (
+    <div className="card record-card">
+      <div className="label">{label}</div>
+      <div className="big">{fmt(r.value)}</div>
+      <div className="sub">
+        <Link href={`/players/${r.player.id}`}>{r.player.name}</Link> vs <Link href={`/matches/${r.match.id}`}>{r.match.opponent}</Link>
+      </div>
     </div>
   );
 }
