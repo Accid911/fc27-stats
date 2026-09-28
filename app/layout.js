@@ -4,6 +4,7 @@ import '@fontsource/barlow-condensed/700.css';
 import '@fontsource/barlow-condensed/800.css';
 import Link from 'next/link';
 import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import Logo from '@/components/Logo';
 import { loadSettings } from '@/lib/data';
 import { CREATOR, MAKER, SERIES, creatorInfo } from '@/lib/site';
@@ -87,6 +88,7 @@ export default async function RootLayout({ children }) {
           </div>
         </footer>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
