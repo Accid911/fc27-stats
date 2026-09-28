@@ -122,10 +122,22 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const update = (k, key, v) => setRows((rs) => rs.map((r) => (r.k === k ? { ...r, [key]: v } : r)));
+  // Changing wins or draws recalculates points (3 × W + D). Points stay editable for deductions.
+  const update = (k, key, v) =>
+    setRows((rs) =>
+      rs.map((r) => {
+        if (r.k !== k) return r;
+        const next = { ...r, [key]: v };
+        if (key === 'won' || key === 'drawn') {
+          next.points = next.won === '' && next.drawn === '' ? '' : 3 * (Number(next.won) || 0) + (Number(next.drawn) || 0);
+        }
+        return next;
+      })
+    );
 
   // Leicester's own row can be calculated from the league matches already logged for this season.
   const leagueMatches = initial.id ? model.matches.filter((x) => x.season_id === initial.id && x.tournament === tournament) : [];
+  const clubRow = rows.find((r) => isClub(r.team, model.clubName));
   function fillFromMatches(k) {
     const t = { won: 0, drawn: 0, lost: 0, gf: 0, ga: 0 };
     for (const x of leagueMatches) {
@@ -250,6 +262,11 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
         <div className="row" style={{ marginBottom: 12 }}>
           <h3>League table ({rows.filter((r) => r.team.trim()).length} teams)</h3>
           <span className="spacer" />
+          {clubRow && leagueMatches.length > 0 && (
+            <button type="button" className="btn secondary small" onClick={() => fillFromMatches(clubRow.k)}>
+              Fill {model.clubName} from {leagueMatches.length} league match{leagueMatches.length > 1 ? 'es' : ''}
+            </button>
+          )}
           <button type="button" className="btn secondary small" onClick={() => setPaste(paste == null ? '' : null)}>
             {paste == null ? 'Paste a list' : 'Close paste'}
           </button>
@@ -282,11 +299,6 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
                   <td className="num muted">{positions[r.k] ?? ''}</td>
                   <td style={{ minWidth: 170 }}>
                     <input value={r.team} onChange={(e) => update(r.k, 'team', e.target.value)} placeholder="Team name" />
-                    {isClub(r.team, model.clubName) && leagueMatches.length > 0 && (
-                      <button type="button" className="linkish" style={{ fontSize: 12, marginTop: 4 }} onClick={() => fillFromMatches(r.k)}>
-                        Fill in from {leagueMatches.length} logged league matches
-                      </button>
-                    )}
                   </td>
                   {STATS.map((key) => (
                     <td key={key} className="num">
