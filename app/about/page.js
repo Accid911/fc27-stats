@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { loadSettings } from '@/lib/data';
-import { SERIES, creatorInfo } from '@/lib/site';
+import { MAKER, SERIES, creatorInfo } from '@/lib/site';
 import Logo from '@/components/Logo';
 
 export const dynamic = 'force-dynamic';
@@ -58,6 +58,16 @@ export default async function AboutPage() {
         <li><Link href="/matches">Matches</Link> — every result, with line-ups and ratings.</li>
         <li><Link href="/players">Players</Link> — the academy graduates and their career numbers.</li>
       </ul>
+
+      <h2>Who made this</h2>
+      <div className="maker-card">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={MAKER.avatar} alt={`${MAKER.name} logo`} width={96} height={96} />
+        <p style={{ margin: 0 }}>
+          This site was built by <b>{MAKER.name}</b>, a viewer of the series, to keep track of every stat of{' '}
+          {creator.name}’s Youth Edition career.
+        </p>
+      </div>
 
       <h2>Small print</h2>
       <p>

@@ -5,7 +5,7 @@ import '@fontsource/barlow-condensed/800.css';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 import { loadSettings } from '@/lib/data';
-import { CREATOR, SERIES, creatorInfo } from '@/lib/site';
+import { CREATOR, MAKER, SERIES, creatorInfo } from '@/lib/site';
 import './globals.css';
 
 const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3000';
@@ -70,6 +70,13 @@ export default async function RootLayout({ children }) {
               <a href={creator.channel} target="_blank" rel="noreferrer">{creator.name}</a>’s FC27 career mode series.
               <br />
               Fan-made site. Not affiliated with EA SPORTS or {clubName} FC; crests and names belong to their owners.
+            </div>
+            <div className="made-by">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={MAKER.avatar} alt={`${MAKER.name} logo`} width={36} height={36} />
+              <span>
+                Site made by <b>{MAKER.name}</b>
+              </span>
             </div>
             <div className="footer-links">
               <a href={creator.channel} target="_blank" rel="noreferrer">Watch on YouTube</a>
