@@ -87,7 +87,7 @@ const newRow = (team = '', points = '', extra = {}) => ({
   k: ++rowKey, team, points, won: '', drawn: '', lost: '', gf: '', ga: '', ...extra,
 });
 const blankIfNull = (v) => (v == null ? '' : v);
-const n = (v) => (v === '' || v == null ? null : Number(v));
+const toNum = (v) => (v === '' || v == null ? null : Number(v));
 // Points typed, or 3×W + D when only W/D/L are filled in
 const pointsOf = (r) => (r.points !== '' ? Number(r.points) : r.won !== '' || r.drawn !== '' ? 3 * (Number(r.won) || 0) + (Number(r.drawn) || 0) : null);
 const gdOf = (r) => (r.gf !== '' && r.ga !== '' ? Number(r.gf) - Number(r.ga) : null);
@@ -191,7 +191,7 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
         rows.filter((r) => r.team.trim()).map((r) => ({
           team: r.team.trim(),
           points: pointsOf(r) ?? 0,
-          ...Object.fromEntries(STATS.map((k) => [k, n(r[k])])),
+          ...Object.fromEntries(STATS.map((k) => [k, toNum(r[k])])),
         }))
       );
       await onSaved(`Saved ✓ Season ${n}`);
