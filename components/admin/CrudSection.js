@@ -120,7 +120,7 @@ export default function CrudSection({ title, table, fields, columns, rows, api, 
 }
 
 export function Field({ field: f, value, onChange }) {
-  const common = { value: value ?? '', onChange: (e) => onChange(e.target.value), required: f.required };
+  const common = { value: value ?? '', onChange: (e) => onChange(e.target.value), required: f.required, placeholder: f.placeholder };
   let input;
   if (f.type === 'select') {
     input = (

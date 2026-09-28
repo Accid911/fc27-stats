@@ -4,7 +4,7 @@ import MatchTable from '@/components/MatchTable';
 import DemoNotice from '@/components/DemoNotice';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Matches · Leicester City Youth' };
+export const metadata = { title: 'Matches' };
 
 export default async function MatchesPage({ searchParams }) {
   const { season } = await searchParams;

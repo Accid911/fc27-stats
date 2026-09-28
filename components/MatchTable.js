@@ -14,6 +14,7 @@ export default function MatchTable({ matches, playerById, clubName, showSeason =
             <th></th>
             <th>Scorers</th>
             <th>POTM</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -30,6 +31,11 @@ export default function MatchTable({ matches, playerById, clubName, showSeason =
                 <td><span className={`result ${m.result}`}>{m.result}</span></td>
                 <td className="scorers">{scorers.join(', ') || '—'}</td>
                 <td>{potm ? <span className="badge gold">★ {playerById[potm.player_id]?.name}</span> : <span className="muted">—</span>}</td>
+                <td>
+                  {m.video_url && (
+                    <a className="watch" href={m.video_url} target="_blank" rel="noreferrer" title="Watch this episode on YouTube">▶</a>
+                  )}
+                </td>
               </tr>
             );
           })}

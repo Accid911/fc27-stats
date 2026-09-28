@@ -226,3 +226,18 @@ td .fixture .fx-score { text-align: center; }
 @media (max-width: 600px) { td .fixture { grid-template-columns: 110px 50px 110px auto; } }
 td .fixture > :first-child { text-align: right; overflow: hidden; text-overflow: ellipsis; }
 td .fixture > :nth-child(3) { overflow: hidden; text-overflow: ellipsis; }
+
+/* Creator / YouTube */
+.btn.yt { background: #e62117; color: #fff; }
+.nav a.nav-yt { color: #fff; background: #e62117; font-weight: 600; }
+.nav a.nav-yt:hover { background: #c81a12; color: #fff; }
+.footer-grid { display: flex; gap: 24px; justify-content: space-between; flex-wrap: wrap; line-height: 1.6; }
+.footer a { color: var(--text); }
+.footer a:hover { color: var(--accent); }
+.footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
+.prose { max-width: 720px; }
+.prose p, .prose li { color: #c6cde0; font-size: 16px; line-height: 1.7; }
+.prose h2 { margin-top: 36px; }
+.prose ul { padding-left: 20px; }
+.prose a { color: var(--accent); }
+.watch { display: inline-grid; place-items: center; width: 26px; height: 20px; border-radius: 5px; background: #e62117; color: #fff !important; font-size: 10px; }

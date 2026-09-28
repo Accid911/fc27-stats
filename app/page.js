@@ -4,6 +4,7 @@ import {
   countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, MOVE_LABEL, fixture, fixtureText,
 } from '@/lib/data';
 import Logo from '@/components/Logo';
+import { SERIES, creatorInfo } from '@/lib/site';
 import Leaderboard from '@/components/Leaderboard';
 import DemoNotice from '@/components/DemoNotice';
 import { BarList, ColumnChart } from '@/components/Charts';
@@ -17,6 +18,7 @@ export default async function Home() {
   const data = await loadAll();
   const model = buildModel(data);
   const { settings } = data;
+  const creator = creatorInfo(settings);
   const rec = teamRecord(model.matches);
   const run = streaks(model.matches);
   const stats = playerStats(model);
@@ -65,7 +67,7 @@ export default async function Home() {
 
       <section className="card hero">
         <div className="eyebrow" style={{ color: 'var(--gold)' }}>
-          FC27 Career Mode · Academy players only{settings.creator_name ? ` · ${settings.creator_name}` : ''}
+          {creator.name} presents · {SERIES} · FC27 Career Mode
         </div>
         <div className="hero-row">
           <div>
@@ -73,12 +75,12 @@ export default async function Home() {
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
               Youth Edition
             </div>
-            {settings.tagline && <p>{settings.tagline}</p>}
-            {settings.youtube_url && (
-              <div style={{ marginTop: 18 }}>
-                <a className="btn" href={settings.youtube_url} target="_blank" rel="noreferrer">▶ Watch the series</a>
-              </div>
-            )}
+            <p>{creator.tagline}</p>
+            <div className="row" style={{ marginTop: 18 }}>
+              <a className="btn yt" href={creator.channel} target="_blank" rel="noreferrer">▶ Watch {creator.name} on YouTube</a>
+              <a className="btn secondary" href={creator.subscribe} target="_blank" rel="noreferrer">Subscribe</a>
+              <Link className="btn secondary" href="/about">What is the Youth Edition?</Link>
+            </div>
           </div>
           <Logo size={120} className="hero-logo" />
         </div>

@@ -5,18 +5,35 @@ import '@fontsource/barlow-condensed/800.css';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 import { loadSettings } from '@/lib/data';
+import { CREATOR, SERIES, creatorInfo } from '@/lib/site';
 import './globals.css';
 
+const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3000';
+const description = `Fan-made stats for ${CREATOR.name}'s FC27 career mode series ${SERIES}: Leicester City with academy players only. Every season, match, player and transfer.`;
+
 export const metadata = {
-  title: 'Leicester City · Youth Edition — FC27 Career',
-  description: 'Every season, match and academy player from the FC27 Leicester City youth career.',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `${CREATOR.name}'s Youth Edition — Leicester City FC27 career stats`,
+    template: `%s · ${CREATOR.name} Youth Edition`,
+  },
+  description,
+  openGraph: {
+    title: `${CREATOR.name}'s Youth Edition — Leicester City`,
+    description,
+    type: 'website',
+    siteName: `${CREATOR.name} Youth Edition stats`,
+  },
+  twitter: { card: 'summary_large_image' },
 };
 
 export default async function RootLayout({ children }) {
   let clubName = 'Leicester City';
+  let creator = creatorInfo(null);
   try {
     const settings = await loadSettings();
     clubName = settings?.club_name || clubName;
+    creator = creatorInfo(settings);
   } catch {}
 
   return (
@@ -28,7 +45,7 @@ export default async function RootLayout({ children }) {
               <Logo size={34} />
               <span className="brand-text">
                 {clubName}
-                <small>Youth Edition</small>
+                <small>{creator.name} · Youth Edition</small>
               </span>
             </Link>
             <nav className="nav">
@@ -37,7 +54,9 @@ export default async function RootLayout({ children }) {
               <Link href="/matches">Matches</Link>
               <Link href="/players">Players</Link>
               <Link href="/transfers">Transfers</Link>
+              <Link href="/about">About</Link>
               <Link href="/admin">Admin</Link>
+              <a className="nav-yt" href={creator.channel} target="_blank" rel="noreferrer">▶ YouTube</a>
             </nav>
           </div>
         </header>
@@ -45,7 +64,19 @@ export default async function RootLayout({ children }) {
           <div className="container">{children}</div>
         </main>
         <footer className="footer">
-          <div className="container">Fan-made stats tracker · Not affiliated with EA Sports</div>
+          <div className="container footer-grid">
+            <div>
+              <b>{clubName} · {SERIES}</b> — the stats hub for{' '}
+              <a href={creator.channel} target="_blank" rel="noreferrer">{creator.name}</a>’s FC27 career mode series.
+              <br />
+              Fan-made site. Not affiliated with EA SPORTS or {clubName} FC; crests and names belong to their owners.
+            </div>
+            <div className="footer-links">
+              <a href={creator.channel} target="_blank" rel="noreferrer">Watch on YouTube</a>
+              <a href={creator.subscribe} target="_blank" rel="noreferrer">Subscribe</a>
+              <Link href="/about">About this site</Link>
+            </div>
+          </div>
         </footer>
       </body>
     </html>

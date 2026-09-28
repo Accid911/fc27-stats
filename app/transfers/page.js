@@ -3,7 +3,7 @@ import { loadAll, buildModel, formatMoney, seasonLabel, MOVE_LABEL, STATUS_BADGE
 import DemoNotice from '@/components/DemoNotice';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Transfers · Leicester City Youth Edition' };
+export const metadata = { title: 'Transfers' };
 
 const TYPE_BADGE = { sold: 'gold', loan: 'blue', loan_return: 'green', released: '' };
 

@@ -8,6 +8,7 @@ import { CUPS, CURRENCIES, LEAGUES } from '@/lib/constants';
 import CrudSection, { Field } from './CrudSection';
 import MatchEditor from './MatchEditor';
 import SeasonEditor from './SeasonEditor';
+import { CREATOR, DEFAULT_TAGLINE } from '@/lib/site';
 import PlayersAdmin from './PlayersAdmin';
 
 const TABS = ['Matches', 'Players', 'Seasons', 'Trophies', 'Site settings'];
@@ -209,10 +210,10 @@ function Dashboard({ api, email, onSignOut }) {
 function SettingsForm({ api, settings, onChanged }) {
   const fields = [
     { key: 'club_name', label: 'Club name', required: true },
-    { key: 'creator_name', label: 'Creator / channel name' },
+    { key: 'creator_name', label: 'Creator / channel name', placeholder: CREATOR.name },
     { key: 'currency', label: 'Currency for transfer fees', type: 'select', required: true, options: CURRENCIES.map((c) => ({ value: c, label: c })) },
-    { key: 'youtube_url', label: 'YouTube playlist or channel URL', type: 'url', wide: true },
-    { key: 'tagline', label: 'Tagline', type: 'textarea', wide: true },
+    { key: 'youtube_url', label: 'YouTube playlist or channel URL (empty = SparringDK channel)', type: 'url', wide: true, placeholder: CREATOR.channel },
+    { key: 'tagline', label: 'Tagline on the homepage (empty = default text)', type: 'textarea', wide: true, placeholder: DEFAULT_TAGLINE },
   ];
   const [form, setForm] = useState(() => Object.fromEntries(fields.map((f) => [f.key, settings?.[f.key] ?? (f.key === 'currency' ? '£' : '')])));
   const [msg, setMsg] = useState('');

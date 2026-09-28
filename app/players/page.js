@@ -3,7 +3,7 @@ import SortableTable from '@/components/SortableTable';
 import DemoNotice from '@/components/DemoNotice';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Players · Leicester City Youth' };
+export const metadata = { title: 'Players' };
 
 export default async function PlayersPage() {
   const data = await loadAll();

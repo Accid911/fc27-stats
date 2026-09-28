@@ -1,6 +1,6 @@
-# Leicester City Youth — FC27 Career Stats
+# SparringDK’s Youth Edition — Leicester City FC27 Career Stats
 
-A fan-made stats site for an FC27 Career Mode series: Leicester City, academy players only.
+A fan-made stats site for [SparringDK](https://www.youtube.com/@SparringDK)’s FC27 career mode series *The Youth Edition*: Leicester City, academy players only.
 
 - **Public site** — overview with records and leaderboards, seasons (with league tables), matches (with line-ups), players. Anyone can view.
 - **Admin (`/admin`)** — you and the creator sign in to add players, seasons and matches. All player stats are calculated from the match line-ups.
