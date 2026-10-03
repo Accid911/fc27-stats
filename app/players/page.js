@@ -12,6 +12,8 @@ export default async function PlayersPage() {
     ...p,
     href: `/players/${p.id}`,
     status: statusText(model.statusById[p.id]),
+    joinedNo: p.joined?.season.number ?? null,
+    joined: undefined,
   }));
 
   return (
@@ -29,12 +31,14 @@ export default async function PlayersPage() {
             { key: 'name', label: 'Player', href: 'href' },
             { key: 'position', label: 'Pos' },
             { key: 'country', label: 'Country' },
+            { key: 'joinedNo', label: 'Joined (S)', num: true },
             { key: 'status', label: 'Status' },
             { key: 'apps', label: 'Apps', num: true },
             { key: 'goals', label: 'Goals', num: true },
             { key: 'assists', label: 'Ast', num: true },
             { key: 'ga', label: 'G+A', num: true },
             { key: 'potm', label: 'POTM', num: true },
+            { key: 'cs', label: 'CS', num: true },
             { key: 'avg_rating', label: 'Avg', num: true, decimals: 1 },
             { key: 'best_rating', label: 'Best', num: true, decimals: 1 },
             { key: 'winPct', label: 'Win %', num: true },

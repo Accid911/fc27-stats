@@ -20,7 +20,10 @@ export default async function SeasonPage({ params }) {
   const trophies = data.trophies.filter((t) => t.season_id === id);
   const rows = playerStats(model, matches)
     .filter((p) => p.apps > 0)
-    .map((p) => ({ ...p, href: `/players/${p.id}` }));
+    .map((p) => ({ ...p, href: `/players/${p.id}`, joined: undefined }));
+  const intake = data.players
+    .filter((p) => model.joinedById[p.id]?.season.id === id)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const tournaments = [...new Set([season.tournament, ...(season.cups || []), ...matches.map((m) => m.tournament || '—')])];
   const moves = model.moves.filter((mv) => mv.season_id === id).reverse();
@@ -121,12 +124,27 @@ export default async function SeasonPage({ params }) {
               { key: 'assists', label: 'Ast', num: true },
               { key: 'ga', label: 'G+A', num: true },
               { key: 'potm', label: 'POTM', num: true },
+              { key: 'cs', label: 'CS', num: true },
               { key: 'avg_rating', label: 'Avg', num: true, decimals: 1 },
               { key: 'best_rating', label: 'Best', num: true, decimals: 1 },
             ]}
           />
         </div>
       </section>
+
+      {intake.length > 0 && (
+        <section className="section">
+          <h2>Academy intake</h2>
+          <p className="muted" style={{ marginTop: -6 }}>Youngsters who joined the first team this season.</p>
+          <div className="chips">
+            {intake.map((p) => (
+              <Link key={p.id} href={`/players/${p.id}`} className="chip">
+                <span className="chip-pos">{p.position}</span> {p.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {moves.length > 0 && (
         <section className="section">

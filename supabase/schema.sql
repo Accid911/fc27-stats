@@ -26,6 +26,7 @@ create table if not exists players (
   name text not null,
   position text,
   country text,
+  joined_season_id uuid references seasons(id) on delete set null, -- season he joined the first team
   created_at timestamptz default now()
 );
 

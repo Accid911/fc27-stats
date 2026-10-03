@@ -31,7 +31,7 @@ export default function PlayersAdmin({ data, api, onChanged }) {
 
   return (
     <>
-      <QuickAdd api={api} onChanged={onChanged} />
+      <QuickAdd api={api} onChanged={onChanged} seasons={model.seasons} />
 
       <div className="row" style={{ margin: '20px 0 12px' }}>
         <div className="chips">
@@ -47,7 +47,7 @@ export default function PlayersAdmin({ data, api, onChanged }) {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Name</th><th>Pos</th><th>Country</th><th>Status</th><th></th></tr>
+              <tr><th>Name</th><th>Pos</th><th>Country</th><th>Joined</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               {rows.length === 0 && <tr><td colSpan={5} className="muted">No players here.</td></tr>}
@@ -58,6 +58,9 @@ export default function PlayersAdmin({ data, api, onChanged }) {
                     <td style={{ fontWeight: 600 }}>{p.name}</td>
                     <td>{p.position || '—'}</td>
                     <td>{p.country || '—'}</td>
+                    <td className="muted">
+                      {model.seasonById[p.joined_season_id] ? seasonLabel(model.seasonById[p.joined_season_id]) : '—'}
+                    </td>
                     <td><span className={`badge ${STATUS_BADGE[st.status]}`}>{statusText(st)}</span></td>
                     <td className="num">
                       <button className="btn secondary small" onClick={() => setEditingId(p.id)}>Edit / transfer</button>
@@ -73,8 +76,9 @@ export default function PlayersAdmin({ data, api, onChanged }) {
   );
 }
 
-function QuickAdd({ api, onChanged }) {
-  const blank = { name: '', position: 'ST', country: '' };
+function QuickAdd({ api, onChanged, seasons }) {
+  const latest = seasons[seasons.length - 1];
+  const blank = { name: '', position: 'ST', country: '', joined_season_id: latest?.id || '' };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -87,10 +91,15 @@ function QuickAdd({ api, onChanged }) {
     setBusy(true);
     setError('');
     try {
-      await api.save('players', { name: capitalizeName(f.name.trim()), position: f.position || null, country: capitalizeName(f.country.trim()) || null });
+      await api.save('players', {
+        name: capitalizeName(f.name.trim()),
+        position: f.position || null,
+        country: capitalizeName(f.country.trim()) || null,
+        joined_season_id: f.joined_season_id || null,
+      });
       await onChanged();
       setMsg(`Added ${capitalizeName(f.name.trim())} ✓`);
-      setF((x) => ({ ...blank, position: x.position, country: '' }));
+      setF((x) => ({ ...blank, position: x.position, joined_season_id: x.joined_season_id }));
       nameRef.current?.focus();
     } catch (err) {
       setError(err.message);
@@ -118,6 +127,7 @@ function QuickAdd({ api, onChanged }) {
           <input list="dl-countries" value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} autoComplete="off" />
           <datalist id="dl-countries">{COUNTRIES.map((c) => <option key={c} value={c} />)}</datalist>
         </label>
+        <JoinedSelect seasons={seasons} value={f.joined_season_id} onChange={(v) => setF({ ...f, joined_season_id: v })} />
         <label style={{ alignSelf: 'end' }}>
           <button className="btn" disabled={busy}>{busy ? 'Adding…' : 'Add player'}</button>
         </label>
@@ -130,7 +140,12 @@ function QuickAdd({ api, onChanged }) {
 function PlayerPanel({ model, player, api, onChanged, onClose }) {
   const st = model.statusById[player.id];
   const moves = model.moves.filter((mv) => mv.player_id === player.id);
-  const [f, setF] = useState({ name: player.name, position: player.position || '', country: player.country || '' });
+  const [f, setF] = useState({
+    name: player.name,
+    position: player.position || '',
+    country: player.country || '',
+    joined_season_id: player.joined_season_id || '',
+  });
   const [action, setAction] = useState(null); // 'sold' | 'loan' | 'loan_return' | 'released'
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -141,7 +156,13 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
     setBusy(true);
     setError('');
     try {
-      await api.save('players', { id: player.id, name: capitalizeName(f.name.trim()), position: f.position || null, country: capitalizeName(f.country.trim()) || null });
+      await api.save('players', {
+        id: player.id,
+        name: capitalizeName(f.name.trim()),
+        position: f.position || null,
+        country: capitalizeName(f.country.trim()) || null,
+        joined_season_id: f.joined_season_id || null,
+      });
       await onChanged();
       setMsg('Details saved ✓');
     } catch (err) {
@@ -204,6 +225,7 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
             <input list="dl-countries2" value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} autoComplete="off" />
             <datalist id="dl-countries2">{COUNTRIES.map((c) => <option key={c} value={c} />)}</datalist>
           </label>
+          <JoinedSelect seasons={model.seasons} value={f.joined_season_id} onChange={(v) => setF({ ...f, joined_season_id: v })} />
         </div>
         <div className="row" style={{ marginTop: 12 }}>
           <button className="btn" disabled={busy}>Save details</button>
@@ -349,5 +371,17 @@ function MoveForm({ type, model, player, lastLoanClub, api, onDone, onCancel }) 
         <button type="button" className="btn secondary" onClick={onCancel}>Cancel</button>
       </div>
     </form>
+  );
+}
+
+function JoinedSelect({ seasons, value, onChange }) {
+  return (
+    <label>
+      Joined the first team
+      <select value={value || ''} onChange={(e) => onChange(e.target.value)}>
+        <option value="">—</option>
+        {[...seasons].reverse().map((s) => <option key={s.id} value={s.id}>{seasonLabel(s)}</option>)}
+      </select>
+    </label>
   );
 }

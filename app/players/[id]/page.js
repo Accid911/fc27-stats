@@ -34,6 +34,7 @@ export default async function PlayerPage({ params }) {
     ['Goals', all.goals],
     ['Assists', all.assists],
     ['POTM', all.potm],
+    ...(all.cs != null ? [['Clean sheets', all.cs]] : []),
     ['Avg rating', all.avg_rating ?? '—'],
     ['Best rating', all.best_rating ?? '—'],
     ['Win %', all.winPct != null ? `${all.winPct}%` : '—'],
@@ -45,6 +46,7 @@ export default async function PlayerPage({ params }) {
       <div className="eyebrow">
         {player.position || 'Player'}
         {player.country ? ` · ${player.country}` : ''}
+        {all.joined ? ` · Joined ${seasonLabel(all.joined.season)}` : ''}
       </div>
       <h1>{player.name}</h1>
       <div className="row" style={{ marginTop: 12 }}>
@@ -75,6 +77,7 @@ export default async function PlayerPage({ params }) {
               { key: 'assists', label: 'Ast', num: true },
               { key: 'ga', label: 'G+A', num: true },
               { key: 'potm', label: 'POTM', num: true },
+              ...(all.cs != null ? [{ key: 'cs', label: 'CS', num: true }] : []),
               { key: 'avg_rating', label: 'Avg', num: true, decimals: 1 },
               { key: 'best_rating', label: 'Best', num: true, decimals: 1 },
             ]}
