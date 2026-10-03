@@ -2,6 +2,7 @@ import { loadAll } from '@/lib/server-data';
 import { buildModel, playerStats, statusText } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import DemoNotice from '@/components/DemoNotice';
+import TransfersSection from '@/components/TransfersSection';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Players' };
@@ -22,7 +23,9 @@ export default async function PlayersPage() {
       <DemoNotice demo={data.demo} />
       <div className="eyebrow">Academy</div>
       <h1 style={{ marginBottom: 8 }}>Players</h1>
-      <p className="muted" style={{ marginBottom: 24 }}>All-time totals from every logged match. Click a column to sort.</p>
+      <p className="muted" style={{ marginBottom: 24 }}>
+        All-time totals from every logged match. Click a column to sort. <a className="link" href="#transfers">Transfers &amp; loans ↓</a>
+      </p>
       <div className="card pad-0">
         <SortableTable
           rows={rows}
@@ -46,6 +49,8 @@ export default async function PlayersPage() {
           ]}
         />
       </div>
+
+      <TransfersSection model={model} data={data} />
     </>
   );
 }

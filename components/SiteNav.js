@@ -10,7 +10,6 @@ const LINKS = [
   ['/matches', 'Matches'],
   ['/players', 'Players'],
   ['/records', 'Records'],
-  ['/transfers', 'Transfers'],
   ['/about', 'About'],
   ['/admin', 'Admin'],
 ];

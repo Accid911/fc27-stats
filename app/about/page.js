@@ -39,7 +39,7 @@ export default async function AboutPage() {
       <ul>
         <li><b>One club:</b> the whole career is played with {club}.</li>
         <li><b>Academy players only:</b> the squad is built from youth academy players, who grow up together over the seasons.</li>
-        <li><b>Players move on:</b> when a youngster is sold, loaned out or released, you’ll find it on the <Link href="/transfers">Transfers</Link> page, with the club and fee.</li>
+        <li><b>Players move on:</b> when a youngster is sold, loaned out or released, you’ll find it under <Link href="/players#transfers">Transfers &amp; loans</Link> on the Players page, with the club and fee.</li>
       </ul>
 
       <h2>How the stats work</h2>

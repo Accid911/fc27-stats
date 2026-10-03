@@ -158,7 +158,7 @@ export default async function Home() {
           <div className="row" style={{ marginBottom: 8 }}>
             <h3>Latest transfers &amp; loans</h3>
             <span className="spacer" />
-            <Link className="link" href="/transfers">All →</Link>
+            <Link className="link" href="/players#transfers">All →</Link>
           </div>
           {recentMoves.length === 0 && <p className="muted">No one has left the academy yet.</p>}
           {recentMoves.map((mv) => (

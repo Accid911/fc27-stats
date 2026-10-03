@@ -95,7 +95,7 @@ Pages read the data from a cache, so they stay fast as the career grows. After e
 ## Project structure
 
 ```
-app/                 pages (overview, records, seasons, matches, players, transfers, about, admin)
+app/                 pages (overview, records, seasons, matches, players + transfers, about, admin)
 components/          tables, leaderboards, admin editors
 lib/server-data.js   loading + caching (server only)
 lib/data.js          all stat calculations (records, streaks, leaders, honours)
