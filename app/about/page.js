@@ -46,18 +46,38 @@ export default async function AboutPage() {
       <ul>
         <li>After each match the line-up is entered with every player’s <b>match rating</b>, <b>goals</b>, <b>assists</b> and the <b>Player of the Match</b>, as shown in the game.</li>
         <li>All player totals — appearances, goals, assists, average rating, records — are calculated from those match line-ups.</li>
+        <li><b>Clean sheets</b> count for goalkeepers and defenders who played in a match where nothing was conceded.</li>
         <li>Cup matches decided by a <b>penalty shoot-out</b> count as a win or a loss (shown as e.g. “1–1 (5–4 pens)”).</li>
         <li>League tables are copied from the game at the end of each season (or during it).</li>
+        <li><b>Trophies</b> are automatic: a cup marked “Winner” or finishing top of the league puts it in the trophy cabinet.</li>
+        <li>Every player shows the season he <b>joined the first team</b>, so you can follow each academy intake.</li>
         <li>Away matches are shown with the home team first, like on a real fixture list.</li>
       </ul>
 
       <h2>Where to start</h2>
       <ul>
-        <li><Link href="/">Overview</Link> — records, form, top scorers and the trophy cabinet.</li>
-        <li><Link href="/seasons">Seasons</Link> — league tables and every season’s results.</li>
+        <li><Link href="/">Overview</Link> — headline numbers, form, the latest season, top scorers and the trophy cabinet.</li>
+        <li><Link href="/records">Records</Link> — record book, fun facts, all-time leaderboards and charts.</li>
+        <li><Link href="/seasons">Seasons</Link> — league tables, cup runs and every season’s results.</li>
         <li><Link href="/matches">Matches</Link> — every result, with line-ups and ratings.</li>
-        <li><Link href="/players">Players</Link> — the academy graduates and their career numbers.</li>
+        <li><Link href="/players">Players</Link> — the academy graduates and their career numbers, with transfers &amp; loans at the bottom.</li>
       </ul>
+
+      <h2>Download the stats</h2>
+      <p>
+        Want to dig into the numbers yourself? Download <b>all stats until now</b> as an Excel file — it opens in Excel,
+        Google Sheets or Numbers and is always up to date with the latest match.
+      </p>
+      <ul>
+        <li><b>Summary</b> — the career at a glance: record, goals, top scorer and trophies.</li>
+        <li><b>Players</b> — every academy player with apps, goals, assists, POTM, clean sheets and average rating.</li>
+        <li><b>Matches</b> and <b>Line-ups</b> — every result, and every player’s rating, goals and assists per match.</li>
+        <li><b>League tables</b>, <b>Transfers</b> and <b>Seasons</b> — including cup runs.</li>
+      </ul>
+      <div className="row" style={{ margin: '12px 0 8px' }}>
+        <a className="btn" href="/api/export" download>⬇ Download all stats (Excel)</a>
+      </div>
+      <p className="muted" style={{ fontSize: 14 }}>You’ll also find this button on the Records page and at the bottom of every page.</p>
 
       <h2>Who made this</h2>
       <div className="maker-card">
