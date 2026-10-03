@@ -5,7 +5,7 @@ import { Kpi } from '@/components/StatCards';
 const TYPE_BADGE = { sold: 'gold', loan: 'blue', loan_return: 'green', released: '' };
 
 // Transfers & loans overview (shown at the bottom of the Players page).
-export default function TransfersSection({ model, data }) {
+export default function TransfersSection({ model, data, base = '' }) {
   const moves = [...model.moves].reverse();
   const sales = model.moves.filter((mv) => mv.type === 'sold');
   const income = sales.reduce((a, mv) => a + Number(mv.fee || 0), 0);
@@ -27,7 +27,7 @@ export default function TransfersSection({ model, data }) {
           <h3 style={{ marginBottom: 12 }}>Out on loan</h3>
           <div className="chips">
             {onLoan.map((p) => (
-              <Link key={p.id} href={`/players/${p.id}`} className="chip">
+              <Link key={p.id} href={`${base}/players/${p.id}`} className="chip">
                 <span className="chip-pos">{p.position}</span> {p.name} <span className="muted">· {model.statusById[p.id].move?.club}</span>
               </Link>
             ))}
@@ -49,9 +49,9 @@ export default function TransfersSection({ model, data }) {
                 <tbody>
                   {moves.map((mv) => (
                     <tr key={mv.id}>
-                      <td>{mv.season ? <Link href={`/seasons/${mv.season.id}`}>{seasonLabel(mv.season)}</Link> : '—'}</td>
+                      <td>{mv.season ? <Link href={`${base}/seasons/${mv.season.id}`}>{seasonLabel(mv.season)}</Link> : '—'}</td>
                       <td className="muted">{mv.moved_on || '—'}</td>
-                      <td><Link href={`/players/${mv.player_id}`}>{mv.player.name}</Link></td>
+                      <td><Link href={`${base}/players/${mv.player_id}`}>{mv.player.name}</Link></td>
                       <td className="muted">{mv.player.position}</td>
                       <td><span className={`badge ${TYPE_BADGE[mv.type]}`}>{MOVE_LABEL[mv.type]}</span></td>
                       <td>{mv.club || '—'}</td>

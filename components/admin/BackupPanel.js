@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { buildWorkbook } from '@/lib/workbook';
+import { filterByEdition, editionSettings } from '@/lib/editions';
 
 const LAST_KEY = 'fc27-last-backup';
 
@@ -37,7 +38,7 @@ export function daysAgo(date) {
   return Math.floor((Date.now() - date.getTime()) / 86400000);
 }
 
-export default function BackupPanel({ api, onChanged }) {
+export default function BackupPanel({ api, onChanged, edition = null }) {
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -73,13 +74,19 @@ export default function BackupPanel({ api, onChanged }) {
 
   const downloadExcel = () =>
     run('xlsx', async () => {
-      const data = await api.loadAll();
+      // The backup is everything; the spreadsheet is the edition you're working on.
+      let data = await api.loadAll();
+      if (edition) {
+        data = filterByEdition(data, edition.id);
+        if (!edition.is_current) data = { ...data, settings: editionSettings(data.settings, edition) };
+        data.edition = edition;
+      }
       const ExcelJS = (await import('exceljs')).default;
       const wb = buildWorkbook(ExcelJS, data);
       const buf = await wb.xlsx.writeBuffer();
       download(
         new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
-        `youth-edition-stats-${today()}.xlsx`
+        `youth-edition-${edition && !edition.is_current ? `${edition.number}-` : ''}stats-${today()}.xlsx`
       );
       setMsg('Spreadsheet downloaded ✓');
     });
@@ -115,7 +122,7 @@ export default function BackupPanel({ api, onChanged }) {
       <div className="card">
         <h3 style={{ marginBottom: 6 }}>Download a backup</h3>
         <p className="muted" style={{ marginTop: 0 }}>
-          Everything — players, seasons, tables, matches, line-ups, transfers and settings — in one file. Download one
+          Everything — every edition's players, seasons, tables, matches, line-ups, transfers and settings — in one file. Download one
           after every few episodes and keep it somewhere safe.
         </p>
         <p style={{ margin: '0 0 12px', fontSize: 14 }}>
@@ -131,7 +138,7 @@ export default function BackupPanel({ api, onChanged }) {
           </button>
         </div>
         <p className="muted" style={{ fontSize: 13, margin: '10px 0 0' }}>
-          The <b>.json</b> file is the real backup (it can be restored below). The spreadsheet is for reading the stats in Excel or Google Sheets.
+          The <b>.json</b> file is the real backup (it can be restored below). The spreadsheet is for reading the stats in Excel or Google Sheets{edition ? <> (only <b>{edition.club}</b>)</> : ''}.
         </p>
       </div>
 

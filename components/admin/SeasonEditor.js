@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { buildModel, isClub, leagueTable, ordinal, seasonLabel, CUP_RESULTS } from '@/lib/data';
 import { CUPS, LEAGUES } from '@/lib/constants';
 
-export default function SeasonEditor({ data, api, onChanged }) {
+export default function SeasonEditor({ data, api, onChanged, edition = null }) {
   const model = useMemo(() => buildModel(data), [data]);
   const [editing, setEditing] = useState(null);
   const [flash, setFlash] = useState('');
@@ -24,6 +24,7 @@ export default function SeasonEditor({ data, api, onChanged }) {
   if (editing) {
     return (
       <SeasonForm
+        edition={edition}
         key={editing.id || 'new'}
         model={model}
         initial={editing}
@@ -92,7 +93,7 @@ const toNum = (v) => (v === '' || v == null ? null : Number(v));
 const pointsOf = (r) => (r.points !== '' ? Number(r.points) : r.won !== '' || r.drawn !== '' ? 3 * (Number(r.won) || 0) + (Number(r.drawn) || 0) : null);
 const gdOf = (r) => (r.gf !== '' && r.ga !== '' ? Number(r.gf) - Number(r.ga) : null);
 
-function SeasonForm({ model, initial, api, onCancel, onSaved }) {
+function SeasonForm({ model, initial, api, onCancel, onSaved, edition = null }) {
   const isNew = !initial.id;
   const last = model.seasons[model.seasons.length - 1];
 
@@ -202,6 +203,7 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
       await api.saveSeason(
         {
           id: initial.id || null,
+          ...(edition ? { edition_id: edition.id } : {}),
           number: n,
           tournament: tournament.trim() || 'Premier League',
           cups,

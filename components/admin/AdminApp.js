@@ -11,8 +11,12 @@ import SeasonEditor from './SeasonEditor';
 import { CREATOR, DEFAULT_TAGLINE } from '@/lib/site';
 import PlayersAdmin from './PlayersAdmin';
 import BackupPanel, { readLastBackup, daysAgo } from './BackupPanel';
+import EditionsAdmin from './EditionsAdmin';
+import { filterByEdition, editionSettings, editionLabel } from '@/lib/editions';
+import { setAdminCookie, clearAdminCookie } from '@/lib/admin-cookie';
 
-const TABS = ['Matches', 'Players', 'Seasons', 'Other trophies', 'Backup', 'Site settings'];
+const TABS = ['Matches', 'Players', 'Seasons', 'Other trophies', 'Editions', 'Backup', 'Site settings'];
+const EDITION_KEY = 'fc27-admin-edition';
 
 export default function AdminApp() {
   const sb = getSupabase();
@@ -26,6 +30,13 @@ export default function AdminApp() {
     const { data } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => data.subscription.unsubscribe();
   }, [sb]);
+
+  // Keep the archive-access cookie in sync with the login (tokens refresh every hour).
+  useEffect(() => {
+    if (!sb || session === undefined) return;
+    if (session?.access_token) setAdminCookie(session.access_token);
+    else clearAdminCookie();
+  }, [sb, session]);
 
   useEffect(() => {
     if (!sb || !session) return setIsAdmin(null);
@@ -83,7 +94,35 @@ function Login({ sb }) {
 }
 
 function Dashboard({ api, email, onSignOut }) {
-  const [data, setData] = useState(null);
+  const [allData, setData] = useState(null);
+  const [editionId, setEditionId] = useState('');
+  const editions = allData?.editions || null; // null = before migration 007 (single career)
+
+  // Pick the edition you were working on last time, otherwise the current one (Leicester).
+  useEffect(() => {
+    if (!editions?.length || editions.some((e) => e.id === editionId)) return;
+    let saved = '';
+    try {
+      saved = localStorage.getItem(EDITION_KEY) || '';
+    } catch {}
+    const pick = editions.find((e) => e.id === saved) || editions.find((e) => e.is_current) || editions[editions.length - 1];
+    setEditionId(pick.id);
+  }, [editions, editionId]);
+  function chooseEdition(id) {
+    setEditionId(id);
+    try {
+      localStorage.setItem(EDITION_KEY, id);
+    } catch {}
+  }
+  const edition = editions?.find((e) => e.id === editionId) || null;
+
+  // Everything below works on the chosen edition only.
+  const data = useMemo(() => {
+    if (!allData) return null;
+    if (!edition) return allData;
+    const d = filterByEdition(allData, edition.id);
+    return edition.is_current ? d : { ...d, settings: editionSettings(allData.settings, edition) };
+  }, [allData, edition]);
   const [error, setError] = useState('');
   const [tab, setTab] = useState(TABS[0]);
   const [seasonId, setSeasonId] = useState('');
@@ -106,7 +145,8 @@ function Dashboard({ api, email, onSignOut }) {
 
   const seasons = useMemo(() => (data ? [...data.seasons].sort((a, b) => b.number - a.number) : []), [data]);
   useEffect(() => {
-    if (seasons.length && !seasons.some((s) => s.id === seasonId)) setSeasonId(seasons[0].id);
+    if (seasons.some((s) => s.id === seasonId)) return;
+    setSeasonId(seasons[0]?.id || ''); // e.g. after switching to an edition without seasons
   }, [seasons, seasonId]);
 
   if (error && !data) {
@@ -121,7 +161,7 @@ function Dashboard({ api, email, onSignOut }) {
       </div>
     );
   }
-  if (!data) return <p className="muted">Loading…</p>;
+  if (!data || (editions?.length && !edition)) return <p className="muted">Loading…</p>;
 
   const seasonOptions = seasons.map((s) => ({ value: s.id, label: seasonLabel(s) }));
   const seasonName = (id) => seasonLabel(data.seasons.find((s) => s.id === id));
@@ -149,8 +189,32 @@ function Dashboard({ api, email, onSignOut }) {
         {onSignOut && <button className="btn secondary small" onClick={onSignOut}>Sign out</button>}
       </div>
 
+      {editions?.length > 0 && (
+        <div className={`edition-picker ${edition && !edition.is_current ? 'archive' : ''}`}>
+          <label>
+            Editing
+            <select value={editionId} onChange={(e) => chooseEdition(e.target.value)}>
+              {[...editions].reverse().map((e) => (
+                <option key={e.id} value={e.id}>
+                  {editionLabel(e)}{e.is_current ? ' (current — public site)' : e.is_public ? '' : ' 🔒'}
+                </option>
+              ))}
+            </select>
+          </label>
+          <a className="btn secondary small" href={edition?.is_current ? '/' : `/editions/${edition?.number}`} target="_blank" rel="noreferrer">
+            View pages ↗
+          </a>
+          <a className="btn secondary small" href="/editions" target="_blank" rel="noreferrer">Archive ↗</a>
+          {edition && !edition.is_current && (
+            <span className="muted" style={{ fontSize: 13 }}>
+              {edition.is_public ? 'Public edition.' : 'Hidden — only admins can see these pages.'}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="tabs">
-        {TABS.map((t) => (
+        {TABS.filter((t) => t !== 'Editions' || editions).map((t) => (
           <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t}</button>
         ))}
       </div>
@@ -190,9 +254,9 @@ function Dashboard({ api, email, onSignOut }) {
         )
       )}
 
-      {tab === 'Players' && <PlayersAdmin data={data} api={api} onChanged={reload} />}
+      {tab === 'Players' && <PlayersAdmin key={editionId} data={data} api={api} onChanged={reload} edition={edition} />}
 
-      {tab === 'Seasons' && <SeasonEditor data={data} api={api} onChanged={reload} />}
+      {tab === 'Seasons' && <SeasonEditor key={editionId} data={data} api={api} onChanged={reload} edition={edition} />}
 
       {tab === 'Other trophies' && seasonId && (
         <p className="muted" style={{ marginTop: -4 }}>
@@ -221,9 +285,11 @@ function Dashboard({ api, email, onSignOut }) {
         />
       )}
 
-      {tab === 'Backup' && <BackupPanel api={api} onChanged={reload} />}
+      {tab === 'Backup' && <BackupPanel api={api} onChanged={reload} edition={edition} />}
 
-            {tab === 'Site settings' && <SettingsForm api={api} settings={data.settings} onChanged={reload} />}
+      {tab === 'Editions' && editions && <EditionsAdmin editions={editions} allData={allData} api={api} onChanged={reload} onPick={(id) => { chooseEdition(id); setTab('Matches'); }} />}
+
+      {tab === 'Site settings' && <SettingsForm api={api} settings={data.settings} onChanged={reload} />}
     </>
   );
 }

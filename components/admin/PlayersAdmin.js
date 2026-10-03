@@ -9,7 +9,7 @@ import { COUNTRIES, POSITIONS, capitalizeName, positionOrder } from '@/lib/const
 
 const STATUS_ORDER = { squad: 0, loan: 1, sold: 2, released: 3 };
 
-export default function PlayersAdmin({ data, api, onChanged }) {
+export default function PlayersAdmin({ data, api, onChanged, edition = null }) {
   const model = useMemo(() => buildModel(data), [data]);
   const [editingId, setEditingId] = useState(null);
   const [filter, setFilter] = useState('all');
@@ -31,7 +31,7 @@ export default function PlayersAdmin({ data, api, onChanged }) {
 
   return (
     <>
-      <QuickAdd api={api} onChanged={onChanged} seasons={model.seasons} />
+      <QuickAdd api={api} onChanged={onChanged} seasons={model.seasons} edition={edition} />
 
       <div className="row" style={{ margin: '20px 0 12px' }}>
         <div className="chips">
@@ -76,7 +76,7 @@ export default function PlayersAdmin({ data, api, onChanged }) {
   );
 }
 
-function QuickAdd({ api, onChanged, seasons }) {
+function QuickAdd({ api, onChanged, seasons, edition }) {
   const latest = seasons[seasons.length - 1];
   const blank = { name: '', position: 'ST', country: '', joined_season_id: latest?.id || '' };
   const [f, setF] = useState(blank);
@@ -96,6 +96,7 @@ function QuickAdd({ api, onChanged, seasons }) {
         position: f.position || null,
         country: capitalizeName(f.country.trim()) || null,
         joined_season_id: f.joined_season_id || null,
+        ...(edition ? { edition_id: edition.id } : {}),
       });
       await onChanged();
       setMsg(`Added ${capitalizeName(f.name.trim())} ✓`);

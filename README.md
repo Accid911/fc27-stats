@@ -40,6 +40,7 @@ Already have a database? Run the migration files you haven't run yet, in order, 
 3. [`004-penalties-table.sql`](supabase/migrations/004-penalties-table.sql) — penalty shoot-outs, full league table (W/D/L/GF/GA)
 4. [`005-joined-season.sql`](supabase/migrations/005-joined-season.sql) — the season each player joined the first team
 5. [`006-cup-results.sql`](supabase/migrations/006-cup-results.sql) — cup results per season (cup wins & league titles become automatic trophies)
+6. [`007-editions.sql`](supabase/migrations/007-editions.sql) — all 13 Youth Editions (FIFA 15 Newport County → FC 27 Leicester City). Everything already in the database becomes edition #13 (Leicester); the 12 older editions start empty and **hidden**.
 
 ## 3. Set up Supabase (the database)
 
@@ -70,6 +71,7 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 
 | Table | What |
 |---|---|
+| `editions` | The 13 Youth Editions: game, club, crest, YouTube link, intro, public or hidden |
 | `settings` | Club name, creator name, tagline, YouTube link |
 | `players` | Name, position, country, season he joined the first team |
 | `player_moves` | Transfers & loans: sold / loaned out / back from loan / released, club, fee, season, date |
@@ -86,7 +88,19 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 - **Matches** — the tournament list is the season's league + cups. Pick the opponent and home/away (away games show the opponent first), type the score — a drawn cup match shows penalty boxes — click players to add them (or **Same players as last match**), then set each player's rating, goals (+/−), assists (+/−) and tap ★ for Player of the Match.
 
 - **Excel download (public)** — anyone can download all stats until now as an Excel file: button on the Records page and in the footer (`/api/export`).
-- **Backup** — download a full backup (.json) or a readable spreadsheet (.xlsx); restore a .json backup if something goes wrong. The admin reminds you when the last backup is more than 14 days old.
+- **Backup** — download a full backup of every edition (.json) or a readable spreadsheet (.xlsx); restore a .json backup if something goes wrong. The admin reminds you when the last backup is more than 14 days old.
+
+## The Youth Edition archive (older editions)
+
+SparringDK did a Youth Edition every year since FIFA 15. Each one works exactly like the Leicester career (players, seasons, matches, records), on its own pages under **`/editions`**:
+
+- `/editions` — all editions · `/editions/1` … `/editions/12` — one edition · `/editions/all-time` — everything together.
+- The main site (`/`, `/players`, …) **only** shows the current edition (Leicester) and has no links to the archive.
+- Older editions are **hidden** until you make them public: anonymous visitors (and search engines) can't read their data at all — the database blocks it. To see hidden pages, sign in on `/admin` first, then open `/editions` in the same browser.
+
+**Entering data for an older edition:** in the admin, pick the edition at the top (“Editing #1 · FIFA 15 · Newport County”). Every tab — Players, Seasons, Matches, trophies — now works on that edition only. Switch back to #13 for Leicester.
+
+**Going public:** Admin → **Editions** → *Details* → tick **Public** → *Save edition*. There you can also add a crest image URL, a YouTube link and a short intro. Make them public one by one, or all at once when everything is filled in.
 
 ## Speed & caching
 
@@ -96,6 +110,8 @@ Pages read the data from a cache, so they stay fast as the career grows. After e
 
 ```
 app/                 pages (overview, records, seasons, matches, players + transfers, about, admin)
+app/editions/        the archive of older Youth Editions
+views/               page bodies shared by the main site and the archive
 components/          tables, leaderboards, admin editors
 lib/server-data.js   loading + caching (server only)
 lib/data.js          all stat calculations (records, streaks, leaders, honours)

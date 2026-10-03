@@ -31,7 +31,7 @@ export function Record({ label, big, sub }) {
   );
 }
 
-export function MatchRecord({ label, m, clubName }) {
+export function MatchRecord({ label, m, clubName, base = '' }) {
   if (!m) return <Record label={label} big="—" sub="Not yet" />;
   const f = fixture(m, clubName);
   const short = (t) => (t.club ? clubName.split(' ')[0] : t.name);
@@ -40,20 +40,20 @@ export function MatchRecord({ label, m, clubName }) {
       <div className="label">{label}</div>
       <div className="big">{f.home.goals}–{f.away.goals}{f.pens ? <span style={{ fontSize: 16 }}> ({f.home.pens}–{f.away.pens} p)</span> : null}</div>
       <div className="sub">
-        <Link href={`/matches/${m.id}`}>{short(f.home)} v {short(f.away)}</Link> · {seasonLabel(m.season)}
+        <Link href={`${base}/matches/${m.id}`}>{short(f.home)} v {short(f.away)}</Link> · {seasonLabel(m.season)}
       </div>
     </div>
   );
 }
 
-export function PlayerRecord({ label, r, fmt = (v) => v }) {
+export function PlayerRecord({ label, r, fmt = (v) => v, base = '' }) {
   if (!r) return <Record label={label} big="—" sub="Not yet" />;
   return (
     <div className="card record-card">
       <div className="label">{label}</div>
       <div className="big">{fmt(r.value)}</div>
       <div className="sub">
-        <Link href={`/players/${r.player.id}`}>{r.player.name}</Link> vs <Link href={`/matches/${r.match.id}`}>{r.match.opponent}</Link>
+        <Link href={`${base}/players/${r.player.id}`}>{r.player.name}</Link> vs <Link href={`${base}/matches/${r.match.id}`}>{r.match.opponent}</Link>
       </div>
     </div>
   );
