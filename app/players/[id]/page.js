@@ -1,11 +1,29 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { loadAll, buildModel, playerStats, seasonLabel, statusText, formatMoney, STATUS_BADGE, MOVE_LABEL } from '@/lib/data';
+import { loadAll } from '@/lib/server-data';
+import { buildModel, playerStats, seasonLabel, statusText, formatMoney, STATUS_BADGE, MOVE_LABEL } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import Fixture from '@/components/Fixture';
 import DemoNotice from '@/components/DemoNotice';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  try {
+    const model = buildModel(await loadAll());
+    const p = playerStats(model).find((x) => x.id === id);
+    if (!p) return { title: 'Player not found' };
+    const bits = [`${p.apps} apps`, `${p.goals} goals`, `${p.assists} assists`];
+    if (p.cs != null) bits.push(`${p.cs} clean sheets`);
+    if (p.avg_rating != null) bits.push(`${p.avg_rating.toFixed(1)} avg rating`);
+    const title = `${p.name} – ${p.goals} goals, ${p.assists} assists`;
+    const description = `${[p.position, p.country].filter(Boolean).join(' · ')} · ${bits.join(', ')} in SparringDK’s Youth Edition career with ${model.clubName}.`;
+    return { title, description, openGraph: { title, description }, twitter: { title, description } };
+  } catch {
+    return { title: 'Player' };
+  }
+}
 
 export default async function PlayerPage({ params }) {
   const { id } = await params;

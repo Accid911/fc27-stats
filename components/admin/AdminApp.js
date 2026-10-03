@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { getSupabase, demoAllowed } from '@/lib/supabase';
 import { makeApi } from '@/lib/admin-api';
 import { seasonLabel } from '@/lib/data';
 import { CUPS, CURRENCIES, LEAGUES } from '@/lib/constants';
@@ -10,8 +10,9 @@ import MatchEditor from './MatchEditor';
 import SeasonEditor from './SeasonEditor';
 import { CREATOR, DEFAULT_TAGLINE } from '@/lib/site';
 import PlayersAdmin from './PlayersAdmin';
+import BackupPanel, { readLastBackup, daysAgo } from './BackupPanel';
 
-const TABS = ['Matches', 'Players', 'Seasons', 'Trophies', 'Site settings'];
+const TABS = ['Matches', 'Players', 'Seasons', 'Other trophies', 'Backup', 'Site settings'];
 
 export default function AdminApp() {
   const sb = getSupabase();
@@ -31,6 +32,9 @@ export default function AdminApp() {
     sb.rpc('is_admin').then(({ data, error }) => setIsAdmin(!error && data === true));
   }, [sb, session]);
 
+  if (!sb && !demoAllowed) {
+    return <div className="error">The database isn’t connected — check the Supabase environment variables on Vercel, then redeploy.</div>;
+  }
   if (!sb) return <Dashboard api={api} />;
   if (session === undefined) return <p className="muted">Loading…</p>;
   if (!session) return <Login sb={sb} />;
@@ -83,6 +87,8 @@ function Dashboard({ api, email, onSignOut }) {
   const [error, setError] = useState('');
   const [tab, setTab] = useState(TABS[0]);
   const [seasonId, setSeasonId] = useState('');
+  const [backupAge, setBackupAge] = useState(0);
+  useEffect(() => setBackupAge(daysAgo(readLastBackup())), [tab]);
 
   const reload = useCallback(async () => {
     try {
@@ -119,7 +125,7 @@ function Dashboard({ api, email, onSignOut }) {
 
   const seasonOptions = seasons.map((s) => ({ value: s.id, label: seasonLabel(s) }));
   const seasonName = (id) => seasonLabel(data.seasons.find((s) => s.id === id));
-  const needsSeason = ['Matches', 'Trophies'].includes(tab);
+  const needsSeason = ['Matches', 'Other trophies'].includes(tab);
 
   return (
     <>
@@ -148,6 +154,13 @@ function Dashboard({ api, email, onSignOut }) {
           <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t}</button>
         ))}
       </div>
+
+      {!api.demo && tab !== 'Backup' && (backupAge == null || backupAge > 14) && (
+        <div className="notice">
+          {backupAge == null ? 'No backup downloaded on this computer yet.' : `Last backup was ${backupAge} days ago.`}{' '}
+          <button className="linkish" onClick={() => setTab('Backup')}>Download one now</button> — it takes a second.
+        </div>
+      )}
 
       {needsSeason &&
         (seasons.length === 0 ? (
@@ -181,10 +194,16 @@ function Dashboard({ api, email, onSignOut }) {
 
       {tab === 'Seasons' && <SeasonEditor data={data} api={api} onChanged={reload} />}
 
-      {tab === 'Trophies' && seasonId && (
+      {tab === 'Other trophies' && seasonId && (
+        <p className="muted" style={{ marginTop: -4 }}>
+          League titles and cup wins are added automatically (league table and cup results in the <b>Seasons</b> tab).
+          Use this only for anything else, like a pre-season tournament.
+        </p>
+      )}
+      {tab === 'Other trophies' && seasonId && (
         <CrudSection
           key={`t-${seasonId}`}
-          title="Trophies"
+          title="Other trophies"
           itemName="trophy"
           table="trophies"
           api={api}
@@ -202,7 +221,9 @@ function Dashboard({ api, email, onSignOut }) {
         />
       )}
 
-      {tab === 'Site settings' && <SettingsForm api={api} settings={data.settings} onChanged={reload} />}
+      {tab === 'Backup' && <BackupPanel api={api} onChanged={reload} />}
+
+            {tab === 'Site settings' && <SettingsForm api={api} settings={data.settings} onChanged={reload} />}
     </>
   );
 }

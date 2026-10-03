@@ -17,6 +17,7 @@ create table if not exists seasons (
   number int not null unique,                       -- Season 1, 2, 3…
   tournament text not null default 'Premier League', -- the league played that season
   cups text[] not null default '{}',                -- cups played that season
+  cup_results jsonb not null default '{}'::jsonb,   -- how far we got: {"FA Cup": "Winner", "EFL Cup": "Semi-final"}
   notes text,
   created_at timestamptz default now()
 );
@@ -46,6 +47,7 @@ create table if not exists matches (
   created_at timestamptz default now()
 );
 
+-- Extra trophies only: league titles and cup wins come from the league table and cup results.
 create table if not exists trophies (
   id uuid primary key default gen_random_uuid(),
   season_id uuid not null references seasons(id) on delete cascade,
@@ -190,14 +192,16 @@ begin
   if not is_admin() then raise exception 'Only admins can save seasons'; end if;
 
   if v_id is null then
-    insert into seasons (number, tournament, cups, notes)
-    values ((p_season->>'number')::int, coalesce(nullif(p_season->>'tournament', ''), 'Premier League'), v_cups, nullif(p_season->>'notes', ''))
+    insert into seasons (number, tournament, cups, cup_results, notes)
+    values ((p_season->>'number')::int, coalesce(nullif(p_season->>'tournament', ''), 'Premier League'), v_cups,
+            coalesce(p_season->'cup_results', '{}'::jsonb), nullif(p_season->>'notes', ''))
     returning id into v_id;
   else
     update seasons set
       number     = (p_season->>'number')::int,
       tournament = coalesce(nullif(p_season->>'tournament', ''), 'Premier League'),
       cups       = v_cups,
+      cup_results = coalesce(p_season->'cup_results', '{}'::jsonb),
       notes      = nullif(p_season->>'notes', '')
     where id = v_id;
     if not found then raise exception 'Season not found'; end if;

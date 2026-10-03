@@ -1,4 +1,5 @@
-import { loadAll, buildModel, playerStats, statusText } from '@/lib/data';
+import { loadAll } from '@/lib/server-data';
+import { buildModel, playerStats, statusText } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import DemoNotice from '@/components/DemoNotice';
 

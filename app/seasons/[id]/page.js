@@ -1,11 +1,29 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { loadAll, buildModel, teamRecord, leagueTable, playerStats, ordinal, seasonLabel, formatMoney, MOVE_LABEL } from '@/lib/data';
+import { loadAll } from '@/lib/server-data';
+import { buildModel, teamRecord, leagueTable, playerStats, ordinal, seasonLabel, formatMoney, MOVE_LABEL, seasonHonours } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import MatchTable from '@/components/MatchTable';
 import DemoNotice from '@/components/DemoNotice';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  try {
+    const model = buildModel(await loadAll());
+    const s = model.seasonById[id];
+    if (!s) return { title: 'Season not found' };
+    const club = leagueTable(model, id).club;
+    const r = teamRecord(model.matches.filter((m) => m.season_id === id));
+    const title = `${seasonLabel(s)} – ${s.tournament}${club ? `, ${ordinal(club.pos)} place` : ''}`;
+    const honours = seasonHonours(model, s).map((h) => h.name);
+    const description = `${model.clubName} in ${s.tournament}: W${r.W} D${r.D} L${r.L}, ${r.GF} goals scored.${honours.length ? ` Trophies: ${honours.join(', ')}.` : ''}`;
+    return { title, description, openGraph: { title, description }, twitter: { title, description } };
+  } catch {
+    return { title: 'Season' };
+  }
+}
 
 export default async function SeasonPage({ params }) {
   const { id } = await params;
@@ -17,7 +35,7 @@ export default async function SeasonPage({ params }) {
   const matches = model.matches.filter((m) => m.season_id === id);
   const r = teamRecord(matches);
   const table = leagueTable(model, id);
-  const trophies = data.trophies.filter((t) => t.season_id === id);
+  const trophies = seasonHonours(model, season);
   const rows = playerStats(model, matches)
     .filter((p) => p.apps > 0)
     .map((p) => ({ ...p, href: `/players/${p.id}`, joined: undefined }));
@@ -41,7 +59,17 @@ export default async function SeasonPage({ params }) {
         {trophies.map((t) => <span key={t.id} className="badge gold">🏆 {t.name}</span>)}
       </div>
       {season.cups?.length > 0 && (
-        <p className="muted" style={{ marginTop: 10, fontSize: 14 }}>Cups: {season.cups.join(' · ')}</p>
+        <div className="row" style={{ marginTop: 10, gap: 8 }}>
+          <span className="muted" style={{ fontSize: 14 }}>Cups:</span>
+          {season.cups.map((c) => {
+            const res = season.cup_results?.[c];
+            return (
+              <span key={c} className={`badge ${res === 'Winner' ? 'gold' : ''}`}>
+                {c}{res ? ` · ${res === 'Winner' ? '🏆 Winner' : res}` : ''}
+              </span>
+            );
+          })}
+        </div>
       )}
       {season.notes && <p className="muted" style={{ marginTop: 14 }}>{season.notes}</p>}
 

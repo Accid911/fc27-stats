@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { buildModel, isClub, leagueTable, ordinal, seasonLabel } from '@/lib/data';
+import { buildModel, isClub, leagueTable, ordinal, seasonLabel, CUP_RESULTS } from '@/lib/data';
 import { CUPS, LEAGUES } from '@/lib/constants';
 
 export default function SeasonEditor({ data, api, onChanged }) {
@@ -99,6 +99,7 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
   const [number, setNumber] = useState(initial.number ?? (last ? last.number + 1 : 1));
   const [tournament, setTournament] = useState(initial.tournament ?? last?.tournament ?? 'Premier League');
   const [cups, setCups] = useState(() => initial.cups ?? last?.cups ?? ['FA Cup', 'EFL Cup']);
+  const [cupResults, setCupResults] = useState(() => ({ ...(initial.cup_results || {}) }));
   const [otherCup, setOtherCup] = useState('');
   const leagueOptions = LEAGUES.includes(tournament) ? LEAGUES : [...LEAGUES, tournament];
   const cupOptions = [...CUPS, ...cups.filter((c) => !CUPS.includes(c))];
@@ -199,7 +200,14 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
     setError('');
     try {
       await api.saveSeason(
-        { id: initial.id || null, number: n, tournament: tournament.trim() || 'Premier League', cups, notes: notes || null },
+        {
+          id: initial.id || null,
+          number: n,
+          tournament: tournament.trim() || 'Premier League',
+          cups,
+          cup_results: Object.fromEntries(cups.filter((c) => cupResults[c]).map((c) => [c, cupResults[c]])),
+          notes: notes || null,
+        },
         rows.filter((r) => r.team.trim()).map((r) => ({
           team: r.team.trim(),
           points: pointsOf(r) ?? 0,
@@ -252,6 +260,28 @@ function SeasonForm({ model, initial, api, onCancel, onSaved }) {
             <button type="button" className="btn secondary small" onClick={addOtherCup} disabled={!otherCup.trim()}>Add</button>
           </div>
         </div>
+
+        {cups.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div className="muted" style={{ fontSize: 13, marginBottom: 6 }}>
+              How far did we get? Pick <b>Winner</b> and the trophy appears in the cabinet automatically.
+            </div>
+            <div className="form-grid">
+              {cups.map((c) => (
+                <label key={c}>
+                  {c}
+                  <select value={cupResults[c] || ''} onChange={(e) => setCupResults((r) => ({ ...r, [c]: e.target.value }))}>
+                    <option value="">— still playing / not set</option>
+                    {CUP_RESULTS.map((x) => <option key={x} value={x}>{x === 'Winner' ? '🏆 Winner' : x}</option>)}
+                  </select>
+                </label>
+              ))}
+            </div>
+            <p className="muted" style={{ fontSize: 13, margin: '10px 0 0' }}>
+              The league title is automatic too: finish top of the league table below and it’s added to the trophy cabinet.
+            </p>
+          </div>
+        )}
 
         <div className="form-grid" style={{ marginTop: 16 }}>
           <label className="wide">Notes<textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>

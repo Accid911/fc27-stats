@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import Logo from '@/components/Logo';
-import { loadSettings } from '@/lib/data';
+import SiteNav from '@/components/SiteNav';
+import { loadSettings } from '@/lib/server-data';
 import { CREATOR, MAKER, SERIES, creatorInfo } from '@/lib/site';
 import './globals.css';
 
@@ -50,16 +51,7 @@ export default async function RootLayout({ children }) {
                 <small>{creator.name} · Youth Edition</small>
               </span>
             </Link>
-            <nav className="nav">
-              <Link href="/">Overview</Link>
-              <Link href="/seasons">Seasons</Link>
-              <Link href="/matches">Matches</Link>
-              <Link href="/players">Players</Link>
-              <Link href="/transfers">Transfers</Link>
-              <Link href="/about">About</Link>
-              <Link href="/admin">Admin</Link>
-              <a className="nav-yt" href={creator.channel} target="_blank" rel="noreferrer">▶ YouTube</a>
-            </nav>
+            <SiteNav channel={creator.channel} />
           </div>
         </header>
         <main>

@@ -1,4 +1,5 @@
-import { loadAll, buildModel, teamRecord, leagueTable, playerStats, topBy, ordinal, seasonLabel } from '@/lib/data';
+import { loadAll } from '@/lib/server-data';
+import { buildModel, teamRecord, leagueTable, playerStats, topBy, ordinal, seasonLabel, seasonHonours } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import DemoNotice from '@/components/DemoNotice';
 
@@ -28,7 +29,7 @@ export default async function SeasonsPage() {
       record: `${r.W}-${r.D}-${r.L}`,
       GF: r.GF,
       GA: r.GA,
-      trophies: data.trophies.filter((x) => x.season_id === s.id).length,
+      trophies: seasonHonours(model, s).length,
       top: top ? `${top.name} (${top.goals})` : null,
       potm: potm ? `${potm.name} (${potm.potm})` : null,
     };

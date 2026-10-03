@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { loadAll, buildModel, formatMoney, seasonLabel, MOVE_LABEL, STATUS_BADGE, statusText } from '@/lib/data';
+import { loadAll } from '@/lib/server-data';
+import { buildModel, formatMoney, seasonLabel, MOVE_LABEL, STATUS_BADGE, statusText } from '@/lib/data';
 import DemoNotice from '@/components/DemoNotice';
 
 export const dynamic = 'force-dynamic';

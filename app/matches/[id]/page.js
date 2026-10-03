@@ -1,10 +1,31 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { loadAll, buildModel, seasonLabel, fixture } from '@/lib/data';
+import { loadAll } from '@/lib/server-data';
+import { buildModel, seasonLabel, fixture, fixtureText } from '@/lib/data';
 import { positionOrder } from '@/lib/constants';
 import DemoNotice from '@/components/DemoNotice';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  try {
+    const model = buildModel(await loadAll());
+    const m = model.matches.find((x) => x.id === id);
+    if (!m) return { title: 'Match not found' };
+    const title = fixtureText(m, model.clubName);
+    const scorers = m.lineup.filter((r) => r.goals > 0).map((r) => model.playerById[r.player_id]?.name).filter(Boolean);
+    const potm = m.lineup.find((r) => r.potm);
+    const description = [
+      `${seasonLabel(m.season)} · ${m.tournament || 'Match'}`,
+      scorers.length ? `Goals: ${scorers.join(', ')}` : null,
+      potm ? `Player of the Match: ${model.playerById[potm.player_id]?.name}` : null,
+    ].filter(Boolean).join(' · ');
+    return { title, description, openGraph: { title, description }, twitter: { title, description } };
+  } catch {
+    return { title: 'Match' };
+  }
+}
 
 const RESULT = { W: 'Win', D: 'Draw', L: 'Defeat' };
 const VENUE = { H: 'Home', A: 'Away', N: 'Neutral' };

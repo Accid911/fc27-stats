@@ -7,7 +7,7 @@ A fan-made stats site for [SparringDK](https://www.youtube.com/@SparringDK)’s 
 
 Built with **Next.js** + **Supabase** (free Postgres + login), hosted on **Vercel**.
 
-Without Supabase connected, the site runs in **demo mode** with sample data, so you can try it right away.
+Without Supabase connected, the site runs in **demo mode** with sample data on your own computer, so you can try it right away. On Vercel it never shows demo data: if the database can't be reached, visitors see a “stats temporarily unavailable” page instead.
 
 ---
 
@@ -39,6 +39,7 @@ Already have a database? Run the migration files you haven't run yet, in order, 
 2. [`003-transfers-cups.sql`](supabase/migrations/003-transfers-cups.sql) — transfers & loans, cups per season, removes player age
 3. [`004-penalties-table.sql`](supabase/migrations/004-penalties-table.sql) — penalty shoot-outs, full league table (W/D/L/GF/GA)
 4. [`005-joined-season.sql`](supabase/migrations/005-joined-season.sql) — the season each player joined the first team
+5. [`006-cup-results.sql`](supabase/migrations/006-cup-results.sql) — cup results per season (cup wins & league titles become automatic trophies)
 
 ## 3. Set up Supabase (the database)
 
@@ -72,24 +73,31 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 | `settings` | Club name, creator name, tagline, YouTube link |
 | `players` | Name, position, country, season he joined the first team |
 | `player_moves` | Transfers & loans: sold / loaned out / back from loan / released, club, fee, season, date |
-| `seasons` | Season number, league (EFL League Two → Premier League), cups played, notes |
+| `seasons` | Season number, league (EFL League Two → Premier League), cups played and how far we got in each, notes |
 | `standings` | The league table for a season: team, W, D, L, GF, GA, points |
 | `matches` | Season, tournament, opponent, score, penalties (cup draws), home/away, date, video link |
 | `match_players` | Who played in a match: rating, goals, assists, Player of the Match |
-| `trophies` | Trophy name per season |
+| `trophies` | Extra trophies only — league titles (top of the table) and cup wins (“Winner”) are automatic |
 
 ## Using the admin
 
 - **Players** — fill in name, position, country, the season he joined (defaults to the latest) and press Enter. Clean sheets are counted automatically for goalkeepers and defenders. Click **Edit / transfer** to change details or to **Sell**, **Loan out**, bring **Back from loan** or **Release** a player (club, fee like `12.5m` or `850k`, season, date). Undo a move by removing it from the history.
-- **Seasons** — *New season* pre-fills the next number, last season's league, cups and teams. Pick the league, click the cups played, fill in W/D/L/GF/GA/points (points auto-fill as 3×W + D), or **Paste a list** (`Arsenal 38 26 6 6 80 30 50 84` or just `Arsenal 84`). Leicester's row can be filled in from the logged league matches.
+- **Seasons** — *New season* pre-fills the next number, last season's league, cups and teams. Pick the league, click the cups played and set how far you got (*Winner* puts the cup in the trophy cabinet), fill in W/D/L/GF/GA/points (points auto-fill as 3×W + D), or **Paste a list** (`Arsenal 38 26 6 6 80 30 50 84` or just `Arsenal 84`). Leicester's row can be filled in from the logged league matches.
 - **Matches** — the tournament list is the season's league + cups. Pick the opponent and home/away (away games show the opponent first), type the score — a drawn cup match shows penalty boxes — click players to add them (or **Same players as last match**), then set each player's rating, goals (+/−), assists (+/−) and tap ★ for Player of the Match.
+
+- **Backup** — download a full backup (.json) or a readable spreadsheet (.xlsx); restore a .json backup if something goes wrong. The admin reminds you when the last backup is more than 14 days old.
+
+## Speed & caching
+
+Pages read the data from a cache, so they stay fast as the career grows. After every save in the admin, the cache is refreshed straight away (`app/api/revalidate`); otherwise it refreshes at least every 5 minutes.
 
 ## Project structure
 
 ```
-app/                 pages (overview, seasons, players, admin)
+app/                 pages (overview, records, seasons, matches, players, transfers, about, admin)
 components/          tables, leaderboards, admin editors
-lib/data.js          loading + all stat calculations (records, streaks, leaders)
+lib/server-data.js   loading + caching (server only)
+lib/data.js          all stat calculations (records, streaks, leaders, honours)
 lib/admin-api.js     save/delete for the admin panel
 lib/demo-data.js     sample data for demo mode
 supabase/schema.sql  database setup (fresh install)

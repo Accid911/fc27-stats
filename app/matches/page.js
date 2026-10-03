@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { loadAll, buildModel, seasonLabel } from '@/lib/data';
+import { loadAll } from '@/lib/server-data';
+import { buildModel, seasonLabel } from '@/lib/data';
 import MatchTable from '@/components/MatchTable';
 import DemoNotice from '@/components/DemoNotice';
 

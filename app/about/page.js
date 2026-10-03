@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { loadSettings } from '@/lib/data';
+import { loadSettings } from '@/lib/server-data';
 import { MAKER, SERIES, creatorInfo } from '@/lib/site';
 import Logo from '@/components/Logo';
 
