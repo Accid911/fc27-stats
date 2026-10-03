@@ -75,6 +75,7 @@ export default async function RootLayout({ children }) {
             <div className="footer-links">
               <a href={creator.channel} target="_blank" rel="noreferrer">Watch on YouTube</a>
               <a href={creator.subscribe} target="_blank" rel="noreferrer">Subscribe</a>
+              <a href="/api/export" download>⬇ Download all stats (Excel)</a>
               <Link href="/about">About this site</Link>
             </div>
           </div>

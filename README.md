@@ -85,6 +85,7 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 - **Seasons** — *New season* pre-fills the next number, last season's league, cups and teams. Pick the league, click the cups played and set how far you got (*Winner* puts the cup in the trophy cabinet), fill in W/D/L/GF/GA/points (points auto-fill as 3×W + D), or **Paste a list** (`Arsenal 38 26 6 6 80 30 50 84` or just `Arsenal 84`). Leicester's row can be filled in from the logged league matches.
 - **Matches** — the tournament list is the season's league + cups. Pick the opponent and home/away (away games show the opponent first), type the score — a drawn cup match shows penalty boxes — click players to add them (or **Same players as last match**), then set each player's rating, goals (+/−), assists (+/−) and tap ★ for Player of the Match.
 
+- **Excel download (public)** — anyone can download all stats until now as an Excel file: button on the Records page and in the footer (`/api/export`).
 - **Backup** — download a full backup (.json) or a readable spreadsheet (.xlsx); restore a .json backup if something goes wrong. The admin reminds you when the last backup is more than 14 days old.
 
 ## Speed & caching

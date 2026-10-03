@@ -64,7 +64,11 @@ export default async function RecordsPage() {
       <DemoNotice demo={data.demo} />
       <div className="eyebrow">All-time</div>
       <h1 style={{ marginBottom: 8 }}>Records</h1>
-      <p className="muted" style={{ marginBottom: 8 }}>Everything worth bragging about — updated after every match.</p>
+      <div className="row" style={{ marginBottom: 8 }}>
+        <p className="muted" style={{ margin: 0 }}>Everything worth bragging about — updated after every match.</p>
+        <span className="spacer" />
+        <a className="btn secondary" href="/api/export" download>⬇ Download all stats (Excel)</a>
+      </div>
 
       <section className="section">
         <h2>Record book</h2>
