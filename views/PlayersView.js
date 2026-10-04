@@ -1,5 +1,5 @@
 import { buildModel, playerStats, statusText } from '@/lib/data';
-import SortableTable from '@/components/SortableTable';
+import PlayersTable from '@/components/PlayersTable';
 import DemoNotice from '@/components/DemoNotice';
 import TransfersSection from '@/components/TransfersSection';
 
@@ -9,6 +9,7 @@ export default function PlayersView({ data, base = '', edition = null }) {
     ...p,
     href: `${base}/players/${p.id}`,
     status: statusText(model.statusById[p.id]),
+    statusKey: model.statusById[p.id]?.status || 'squad',
     joinedNo: p.joined?.season.number ?? null,
     joined: undefined,
   }));
@@ -21,11 +22,9 @@ export default function PlayersView({ data, base = '', edition = null }) {
       <p className="muted" style={{ marginBottom: 24 }}>
         All-time totals from every logged match. Click a column to sort. <a className="link" href="#transfers">Transfers &amp; loans ↓</a>
       </p>
-      <div className="card pad-0">
-        <SortableTable
+      <PlayersTable
           rows={rows}
           defaultSort="goals"
-          rank
           columns={[
             { key: 'name', label: 'Player', href: 'href' },
             { key: 'position', label: 'Pos' },
@@ -43,7 +42,6 @@ export default function PlayersView({ data, base = '', edition = null }) {
             { key: 'winPct', label: 'Win %', num: true },
           ]}
         />
-      </div>
 
       <TransfersSection base={base} model={model} data={data} />
     </>

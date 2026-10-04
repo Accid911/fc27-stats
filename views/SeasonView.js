@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { buildModel, teamRecord, leagueTable, playerStats, ordinal, seasonLabel, formatMoney, MOVE_LABEL, seasonHonours } from '@/lib/data';
+import { buildModel, teamRecord, leagueTable, playerStats, ordinal, seasonLabel, formatMoney, moveFee, MOVE_LABEL, seasonHonours } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import MatchTable from '@/components/MatchTable';
 import DemoNotice from '@/components/DemoNotice';
@@ -181,7 +181,7 @@ export default function SeasonView({ data, id, base = '', edition = null }) {
                       <td><Link href={`${base}/players/${mv.player_id}`}>{mv.player.name}</Link></td>
                       <td>{MOVE_LABEL[mv.type]}</td>
                       <td>{mv.club || '—'}</td>
-                      <td className="num">{mv.fee != null ? formatMoney(mv.fee, model.currency) : '—'}</td>
+                      <td className="num">{moveFee(mv) != null ? formatMoney(moveFee(mv), model.currency) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>

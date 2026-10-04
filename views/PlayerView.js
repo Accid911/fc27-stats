@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { buildModel, playerStats, seasonLabel, statusText, formatMoney, STATUS_BADGE, MOVE_LABEL } from '@/lib/data';
+import { buildModel, playerStats, seasonLabel, statusText, formatMoney, moveFee, STATUS_BADGE, MOVE_LABEL } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import Fixture from '@/components/Fixture';
 import DemoNotice from '@/components/DemoNotice';
@@ -111,7 +111,7 @@ export default function PlayerView({ data, id, base = '', edition = null }) {
                       <td className="muted">{mv.moved_on || '—'}</td>
                       <td style={{ fontWeight: 600 }}>{MOVE_LABEL[mv.type]}</td>
                       <td>{mv.club || '—'}</td>
-                      <td className="num">{mv.fee != null ? formatMoney(mv.fee, model.currency) : '—'}</td>
+                      <td className="num">{moveFee(mv) != null ? formatMoney(moveFee(mv), model.currency) : '—'}</td>
                       <td className="muted" style={{ whiteSpace: 'normal' }}>{mv.notes || ''}</td>
                     </tr>
                   ))}

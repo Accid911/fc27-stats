@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { formatMoney, seasonLabel, MOVE_LABEL, statusText } from '@/lib/data';
+import { formatMoney, seasonLabel, MOVE_LABEL, statusText, moveFee } from '@/lib/data';
 import { Kpi } from '@/components/StatCards';
 
 const TYPE_BADGE = { sold: 'gold', loan: 'blue', loan_return: 'green', released: '' };
@@ -9,7 +9,7 @@ export default function TransfersSection({ model, data, base = '' }) {
   const moves = [...model.moves].reverse();
   const sales = model.moves.filter((mv) => mv.type === 'sold');
   const income = sales.reduce((a, mv) => a + Number(mv.fee || 0), 0);
-  const loanIncome = model.moves.filter((mv) => mv.type === 'loan').reduce((a, mv) => a + Number(mv.fee || 0), 0);
+  const loans = model.moves.filter((mv) => mv.type === 'loan').length;
   const onLoan = data.players.filter((p) => model.statusById[p.id]?.status === 'loan');
 
   return (
@@ -18,7 +18,7 @@ export default function TransfersSection({ model, data, base = '' }) {
       <div className="grid grid-kpi">
         <Kpi value={sales.length} label="Players sold" />
         <Kpi value={formatMoney(income, model.currency)} label="Transfer income" gold />
-        <Kpi value={formatMoney(loanIncome, model.currency)} label="Loan fees" />
+        <Kpi value={loans} label="Loan spells" />
         <Kpi value={onLoan.length} label="Out on loan now" />
       </div>
 
@@ -55,7 +55,7 @@ export default function TransfersSection({ model, data, base = '' }) {
                       <td className="muted">{mv.player.position}</td>
                       <td><span className={`badge ${TYPE_BADGE[mv.type]}`}>{MOVE_LABEL[mv.type]}</span></td>
                       <td>{mv.club || '—'}</td>
-                      <td className="num" style={{ fontWeight: 700 }}>{mv.fee != null ? formatMoney(mv.fee, model.currency) : '—'}</td>
+                      <td className="num" style={{ fontWeight: 700 }}>{moveFee(mv) != null ? formatMoney(moveFee(mv), model.currency) : '—'}</td>
                       <td className="muted">{statusText(model.statusById[mv.player_id])}</td>
                     </tr>
                   ))}

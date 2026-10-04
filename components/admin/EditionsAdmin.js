@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import ClubBadge from '@/components/ClubBadge';
-import { editionLabel } from '@/lib/editions';
+import { editionLabel, crestUrl } from '@/lib/editions';
 
 // All Youth Editions: details (crest, video link, intro text) and whether the public can see them.
 export default function EditionsAdmin({ editions, allData, api, onChanged, onPick }) {
@@ -110,7 +110,7 @@ function EditionForm({ edition, api, hasData, onSaved }) {
         <label>Club *<input value={f.club} onChange={set('club')} placeholder="Newport County" required /></label>
         <label>
           Crest image URL
-          <input value={f.crest_url} onChange={set('crest_url')} placeholder="https://…/crest.png" inputMode="url" />
+          <input value={f.crest_url} onChange={set('crest_url')} placeholder={crestUrl({ club: f.club }) || 'https://…/crest.png'} inputMode="url" />
         </label>
         <label>
           YouTube playlist / first video

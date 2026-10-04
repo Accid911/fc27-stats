@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook, countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, MOVE_LABEL, fixture, fixtureText, funFacts, allHonours } from '@/lib/data';
+import { buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook, countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, moveFee, MOVE_LABEL, fixture, fixtureText, funFacts, allHonours } from '@/lib/data';
 import Logo from '@/components/Logo';
 import ClubBadge from '@/components/ClubBadge';
 import { SERIES, creatorInfo } from '@/lib/site';
@@ -166,7 +166,7 @@ export default function OverviewView({ data, base = '', edition = null }) {
                   {MOVE_LABEL[mv.type]}{mv.club ? ` · ${mv.club}` : ''}{mv.season ? ` · ${seasonLabel(mv.season)}` : ''}
                 </span>
               </span>
-              {mv.fee != null && <span className="val" style={{ fontSize: 20 }}>{formatMoney(mv.fee, model.currency)}</span>}
+              {moveFee(mv) != null && <span className="val" style={{ fontSize: 20 }}>{formatMoney(moveFee(mv), model.currency)}</span>}
             </div>
           ))}
         </div>

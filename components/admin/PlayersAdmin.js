@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import {
-  buildModel, formatMoney, parseMoney, seasonLabel, statusText,
+  buildModel, formatMoney, moveFee, parseMoney, seasonLabel, statusText,
   MOVE_LABEL, STATUS_BADGE, STATUS_LABEL,
 } from '@/lib/data';
 import { COUNTRIES, POSITIONS, capitalizeName, positionOrder } from '@/lib/constants';
@@ -278,7 +278,7 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
                   <td className="muted">{mv.moved_on || '—'}</td>
                   <td style={{ fontWeight: 600 }}>{MOVE_LABEL[mv.type]}</td>
                   <td>{mv.club || '—'}</td>
-                  <td className="num">{mv.fee != null ? formatMoney(mv.fee, model.currency) : '—'}</td>
+                  <td className="num">{moveFee(mv) != null ? formatMoney(moveFee(mv), model.currency) : '—'}</td>
                   <td className="muted" style={{ whiteSpace: 'normal' }}>{mv.notes || ''}</td>
                   <td className="num"><button className="btn danger small" onClick={() => removeMove(mv)} aria-label="Remove">✕</button></td>
                 </tr>
@@ -299,7 +299,7 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
 
 const MOVE_COPY = {
   sold: { title: 'Sell player', club: 'Sold to *', fee: 'Transfer fee', button: 'Confirm sale' },
-  loan: { title: 'Loan out', club: 'Loaned to *', fee: 'Loan fee (optional)', button: 'Confirm loan' },
+  loan: { title: 'Loan out', club: 'Loaned to *', fee: null, button: 'Confirm loan' },
   loan_return: { title: 'Back from loan', club: 'Returning from', fee: null, button: 'Confirm return' },
   released: { title: 'Release player', club: 'Joined (optional)', fee: null, button: 'Confirm release' },
 };
