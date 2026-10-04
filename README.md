@@ -41,6 +41,7 @@ Already have a database? Run the migration files you haven't run yet, in order, 
 4. [`005-joined-season.sql`](supabase/migrations/005-joined-season.sql) — the season each player joined the first team
 5. [`006-cup-results.sql`](supabase/migrations/006-cup-results.sql) — cup results per season (cup wins & league titles become automatic trophies)
 6. [`007-editions.sql`](supabase/migrations/007-editions.sql) — all 13 Youth Editions (FIFA 15 Newport County → FC 27 Leicester City). Everything already in the database becomes edition #13 (Leicester); the 12 older editions start empty and **hidden**.
+7. [`008-catch-up.sql`](supabase/migrations/008-catch-up.sql) — safe repair, run after 007: adds anything from 005/006 that was skipped and refreshes the API. Can be run any number of times. (After 007, don't run 006 itself anymore — use 008.)
 
 ## 3. Set up Supabase (the database)
 

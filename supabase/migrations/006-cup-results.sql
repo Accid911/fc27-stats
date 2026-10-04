@@ -1,4 +1,5 @@
 -- Migration 006 — cup results per season (trophies for cups/league are no longer entered twice)
+-- ⚠ Already ran 007-editions? Don't run this file — run 008-catch-up.sql instead.
 -- Run AFTER 005. Run once in Supabase → SQL Editor → New query → Run. Keeps all your data.
 
 alter table seasons add column if not exists cup_results jsonb not null default '{}'::jsonb;
