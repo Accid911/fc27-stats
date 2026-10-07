@@ -104,6 +104,8 @@ SparringDK did a Youth Edition every year since FIFA 15. Each one works exactly 
 
 **Going public:** Admin → **Editions** → *Details* → tick **Public** → *Save edition*. There you can also add a crest image URL, a YouTube link and a short intro. Make them public one by one, or all at once when everything is filled in.
 
+**Personalising an edition:** add an entry for the edition number in [`lib/themes.js`](lib/themes.js) (club colours, crest in `public/crests/`, nickname, stadium). That edition's pages then get the club's colours, its crest and name top left, its crest as browser-tab icon and its own link-preview image. Edition #12 (Cambridge United) is personalised; the others use the normal look until they get an entry. The main Leicester site never changes.
+
 ## Speed & caching
 
 Pages read the data from a cache, so they stay fast as the career grows. After every save in the admin, the cache is refreshed straight away (`app/api/revalidate`); otherwise it refreshes at least every 5 minutes.

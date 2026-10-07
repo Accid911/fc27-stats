@@ -1,3 +1,4 @@
+import { editionTheme } from '@/lib/themes';
 import Link from 'next/link';
 import { buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook, countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, moveFee, MOVE_LABEL, fixture, fixtureText, funFacts, allHonours } from '@/lib/data';
 import Logo from '@/components/Logo';
@@ -11,6 +12,7 @@ import { Kpi, Mini, Record, MatchRecord, PlayerRecord, plural } from '@/componen
 const RUN = { W: 'win', D: 'draw', L: 'loss' };
 
 export default function OverviewView({ data, base = '', edition = null }) {
+  const theme = editionTheme(edition);
   const model = buildModel(data);
   const { settings } = data;
   const creator = creatorInfo(settings);
@@ -72,6 +74,14 @@ export default function OverviewView({ data, base = '', edition = null }) {
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
               Youth Edition
             </div>
+            {theme && (
+              <div className="club-facts">
+                {theme.nickname && <span><b>Nickname</b>{theme.nickname}</span>}
+                {theme.stadium && <span><b>Stadium</b>{theme.stadium}</span>}
+                {theme.founded && <span><b>Founded</b>{theme.founded}</span>}
+                {theme.colorsLabel && <span><b>Colours</b>{theme.colorsLabel}</span>}
+              </div>
+            )}
             <p>{edition ? edition.description || `${creator.name}’s ${edition.game} Youth Edition career with ${edition.club} — academy players only.` : creator.tagline}</p>
             <div className="row" style={{ marginTop: 18 }}>
               <a className="btn yt" href={edition?.youtube_url || creator.channel} target="_blank" rel="noreferrer">▶ Watch {creator.name} on YouTube</a>

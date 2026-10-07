@@ -15,7 +15,8 @@ const LINKS = [
 ];
 
 // Full menu on desktop; a "Menu" button with a drop-down on phones and small screens.
-export default function SiteNav({ channel }) {
+// links: [href, label, exact?] — the first link (home) always matches exactly.
+export default function SiteNav({ channel, links = LINKS }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -27,7 +28,7 @@ export default function SiteNav({ channel }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const active = (href) => (href === '/' ? pathname === '/' : pathname?.startsWith(href));
+  const active = (href, exact) => (exact || href === links[0][0] ? pathname === href : pathname?.startsWith(href));
 
   return (
     <>
@@ -42,8 +43,8 @@ export default function SiteNav({ channel }) {
         {open ? 'Close' : 'Menu'}
       </button>
       <nav id="site-nav" className={`nav ${open ? 'open' : ''}`}>
-        {LINKS.map(([href, label]) => (
-          <Link key={href} href={href} className={active(href) ? 'active' : ''} aria-current={active(href) ? 'page' : undefined}>
+        {links.map(([href, label, exact]) => (
+          <Link key={href} href={href} className={active(href, exact) ? 'active' : ''} aria-current={active(href, exact) ? 'page' : undefined}>
             {label}
           </Link>
         ))}
