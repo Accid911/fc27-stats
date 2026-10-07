@@ -15,6 +15,7 @@
   --accent-line: #243f86;
   --glow-rgb: 24, 64, 184;      /* hero glow */
   --header-rgb: 7, 10, 20;
+  --on-accent: #fff;            /* text on an accent-coloured badge */
   --win: #3ddc84;
   --draw: #a3abbd;
   --loss: #ef5d5d;
@@ -313,7 +314,7 @@ td .fixture > :nth-child(3) { overflow: hidden; text-overflow: ellipsis; }
 .kit-no {
   display: inline-flex; align-items: center; justify-content: center; vertical-align: 0.12em;
   min-width: 1.5em; height: 1.25em; padding: 0 .2em; margin-right: .35em; border-radius: .18em;
-  background: var(--accent); color: #fff; font-size: .62em; line-height: 1; font-variant-numeric: tabular-nums;
+  background: var(--accent); color: var(--on-accent); font-size: .62em; line-height: 1; font-variant-numeric: tabular-nums;
 }
 
 /* Personalised edition (see lib/themes.js) */
