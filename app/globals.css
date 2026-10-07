@@ -303,3 +303,10 @@ td .fixture > :nth-child(3) { overflow: hidden; text-overflow: ellipsis; }
 .edition-picker label { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 600; font-size: 14px; }
 .edition-picker select { width: auto; min-width: 260px; }
 .edition-picker.archive { border-color: #6b5412; background: #1a170c; }
+
+/* Kit number next to a player's name */
+.kit-no {
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: 0.12em;
+  min-width: 1.5em; height: 1.25em; padding: 0 .2em; margin-right: .35em; border-radius: .18em;
+  background: var(--accent); color: #fff; font-size: .62em; line-height: 1; font-variant-numeric: tabular-nums;
+}

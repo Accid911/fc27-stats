@@ -42,6 +42,7 @@ Already have a database? Run the migration files you haven't run yet, in order, 
 5. [`006-cup-results.sql`](supabase/migrations/006-cup-results.sql) — cup results per season (cup wins & league titles become automatic trophies)
 6. [`007-editions.sql`](supabase/migrations/007-editions.sql) — all 13 Youth Editions (FIFA 15 Newport County → FC 27 Leicester City). Everything already in the database becomes edition #13 (Leicester); the 12 older editions start empty and **hidden**.
 7. [`008-catch-up.sql`](supabase/migrations/008-catch-up.sql) — safe repair, run after 007: adds anything from 005/006 that was skipped and refreshes the API. Can be run any number of times. (After 007, don't run 006 itself anymore — use 008.)
+8. [`009-kit-numbers.sql`](supabase/migrations/009-kit-numbers.sql) — kit numbers for players (optional per player)
 
 ## 3. Set up Supabase (the database)
 
@@ -74,7 +75,7 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 |---|---|
 | `editions` | The 13 Youth Editions: game, club, crest, YouTube link, intro, public or hidden |
 | `settings` | Club name, creator name, tagline, YouTube link |
-| `players` | Name, position, country, season he joined the first team |
+| `players` | Name, kit number (optional), position, country, season he joined the first team |
 | `player_moves` | Transfers & loans: sold / loaned out / back from loan / released, club, fee, season, date |
 | `seasons` | Season number, league (EFL League Two → Premier League), cups played and how far we got in each, notes |
 | `standings` | The league table for a season: team, W, D, L, GF, GA, points |

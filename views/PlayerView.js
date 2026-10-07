@@ -60,7 +60,10 @@ export default function PlayerView({ data, id, base = '', edition = null }) {
         {player.country ? ` · ${player.country}` : ''}
         {all.joined ? ` · Joined ${seasonLabel(all.joined.season)}` : ''}
       </div>
-      <h1>{player.name}</h1>
+      <h1>
+        {player.kit_number != null && <span className="kit-no" title={`Kit number ${player.kit_number}`}>{player.kit_number}</span>}
+        {player.name}
+      </h1>
       <div className="row" style={{ marginTop: 12 }}>
         <span className={`badge ${STATUS_BADGE[st.status]}`}>{statusText(st)}</span>
         {all.hatTricks > 0 && <span className="badge gold">{all.hatTricks} hat-trick{all.hatTricks > 1 ? 's' : ''}</span>}

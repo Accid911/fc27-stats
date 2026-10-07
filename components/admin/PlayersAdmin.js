@@ -9,6 +9,36 @@ import { COUNTRIES, POSITIONS, capitalizeName, positionOrder } from '@/lib/const
 
 const STATUS_ORDER = { squad: 0, loan: 1, sold: 2, released: 3 };
 
+// Kit number: '' = no number. Returns null (none), a number 1–99, or NaN when invalid.
+const parseKit = (v) => {
+  const t = String(v ?? '').trim();
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isInteger(n) && n >= 1 && n <= 99 ? n : NaN;
+};
+
+// Who else (still at the club or on loan) already wears this number?
+function kitTakenBy(model, kit, exceptId) {
+  if (kit == null || Number.isNaN(kit)) return null;
+  return model.data.players.find(
+    (p) => p.id !== exceptId && Number(p.kit_number) === kit && ['squad', 'loan'].includes(model.statusById[p.id]?.status)
+  );
+}
+
+function KitField({ value, onChange, model, exceptId }) {
+  const kit = parseKit(value);
+  const taken = kitTakenBy(model, kit, exceptId);
+  return (
+    <label>
+      Kit number
+      <input value={value} onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} placeholder="none" inputMode="numeric" title="Leave empty for no number" />
+      {(Number.isNaN(kit) || taken) && (
+        <span style={{ fontSize: 12, color: 'var(--gold)' }}>{Number.isNaN(kit) ? '1 to 99' : `${taken.name} also has #${kit}`}</span>
+      )}
+    </label>
+  );
+}
+
 export default function PlayersAdmin({ data, api, onChanged, edition = null }) {
   const model = useMemo(() => buildModel(data), [data]);
   const [editingId, setEditingId] = useState(null);
@@ -31,7 +61,7 @@ export default function PlayersAdmin({ data, api, onChanged, edition = null }) {
 
   return (
     <>
-      <QuickAdd api={api} onChanged={onChanged} seasons={model.seasons} edition={edition} />
+      <QuickAdd api={api} onChanged={onChanged} model={model} edition={edition} />
 
       <div className="row" style={{ margin: '20px 0 12px' }}>
         <div className="chips">
@@ -47,14 +77,15 @@ export default function PlayersAdmin({ data, api, onChanged, edition = null }) {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Name</th><th>Pos</th><th>Country</th><th>Joined</th><th>Status</th><th></th></tr>
+              <tr><th className="num">No.</th><th>Name</th><th>Pos</th><th>Country</th><th>Joined</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
-              {rows.length === 0 && <tr><td colSpan={5} className="muted">No players here.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={7} className="muted">No players here.</td></tr>}
               {rows.map((p) => {
                 const st = model.statusById[p.id];
                 return (
                   <tr key={p.id}>
+                    <td className="num muted">{p.kit_number ?? '—'}</td>
                     <td style={{ fontWeight: 600 }}>{p.name}</td>
                     <td>{p.position || '—'}</td>
                     <td>{p.country || '—'}</td>
@@ -76,9 +107,10 @@ export default function PlayersAdmin({ data, api, onChanged, edition = null }) {
   );
 }
 
-function QuickAdd({ api, onChanged, seasons, edition }) {
+function QuickAdd({ api, onChanged, model, edition }) {
+  const seasons = model.seasons;
   const latest = seasons[seasons.length - 1];
-  const blank = { name: '', position: 'ST', country: '', joined_season_id: latest?.id || '' };
+  const blank = { name: '', kit: '', position: 'ST', country: '', joined_season_id: latest?.id || '' };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -88,11 +120,13 @@ function QuickAdd({ api, onChanged, seasons, edition }) {
   async function submit(e) {
     e.preventDefault();
     if (!f.name.trim()) return;
+    if (Number.isNaN(parseKit(f.kit))) return setError('Kit numbers go from 1 to 99 (or leave it empty).');
     setBusy(true);
     setError('');
     try {
       await api.save('players', {
         name: capitalizeName(f.name.trim()),
+        ...(parseKit(f.kit) != null ? { kit_number: parseKit(f.kit) } : {}),
         position: f.position || null,
         country: capitalizeName(f.country.trim()) || null,
         joined_season_id: f.joined_season_id || null,
@@ -117,6 +151,7 @@ function QuickAdd({ api, onChanged, seasons, edition }) {
       </div>
       <div className="form-grid">
         <label>Name *<input ref={nameRef} value={f.name} onChange={(e) => { setMsg(''); setF({ ...f, name: capitalizeName(e.target.value) }); }} required /></label>
+        <KitField value={f.kit} onChange={(v) => setF({ ...f, kit: v })} model={model} />
         <label>
           Position *
           <select value={f.position} onChange={(e) => setF({ ...f, position: e.target.value })} required>
@@ -143,6 +178,7 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
   const moves = model.moves.filter((mv) => mv.player_id === player.id);
   const [f, setF] = useState({
     name: player.name,
+    kit: player.kit_number != null ? String(player.kit_number) : '',
     position: player.position || '',
     country: player.country || '',
     joined_season_id: player.joined_season_id || '',
@@ -154,12 +190,16 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
 
   async function saveDetails(e) {
     e.preventDefault();
+    if (Number.isNaN(parseKit(f.kit))) return setError('Kit numbers go from 1 to 99 (or leave it empty).');
     setBusy(true);
     setError('');
     try {
+      const kit = parseKit(f.kit);
       await api.save('players', {
         id: player.id,
         name: capitalizeName(f.name.trim()),
+        // only send the field when there is (or was) a number, so the form still works before migration 009
+        ...(kit != null || player.kit_number != null ? { kit_number: kit } : {}),
         position: f.position || null,
         country: capitalizeName(f.country.trim()) || null,
         joined_season_id: f.joined_season_id || null,
@@ -208,12 +248,13 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
         <span className="spacer" />
         <span className={`badge ${STATUS_BADGE[st.status]}`}>{statusText(st)}</span>
       </div>
-      <h2>{player.name}</h2>
+      <h2>{player.kit_number != null && <span className="kit-no">{player.kit_number}</span>}{player.name}</h2>
 
       <form className="card" onSubmit={saveDetails}>
         <h3 style={{ marginBottom: 12 }}>Details</h3>
         <div className="form-grid">
           <label>Name *<input value={f.name} onChange={(e) => setF({ ...f, name: capitalizeName(e.target.value) })} required /></label>
+          <KitField value={f.kit} onChange={(v) => setF({ ...f, kit: v })} model={model} exceptId={player.id} />
           <label>
             Position
             <select value={f.position} onChange={(e) => setF({ ...f, position: e.target.value })}>

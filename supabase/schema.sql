@@ -28,6 +28,7 @@ create table if not exists players (
   position text,
   country text,
   joined_season_id uuid references seasons(id) on delete set null, -- season he joined the first team
+  kit_number smallint check (kit_number between 1 and 99),           -- optional shirt number
   created_at timestamptz default now()
 );
 
