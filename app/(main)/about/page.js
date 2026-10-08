@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { loadSettings } from '@/lib/server-data';
+import { loadSettings, listEditions } from '@/lib/server-data';
 import { MAKER, SERIES, creatorInfo } from '@/lib/site';
 import Logo from '@/components/Logo';
 
@@ -13,6 +13,12 @@ export default async function AboutPage() {
   } catch {}
   const creator = creatorInfo(settings);
   const club = settings?.club_name || 'Leicester City';
+  // Older Youth Editions that are public (the archive is only mentioned once there is something to see)
+  let olderPublic = [];
+  try {
+    const { editions } = await listEditions();
+    olderPublic = editions.filter((e) => e.is_public && !e.is_current);
+  } catch {}
 
   return (
     <div className="prose">
@@ -39,7 +45,8 @@ export default async function AboutPage() {
       <ul>
         <li><b>One club:</b> the whole career is played with {club}.</li>
         <li><b>Academy players only:</b> the squad is built from youth academy players, who grow up together over the seasons.</li>
-        <li><b>Players move on:</b> when a youngster is sold, loaned out or released, you’ll find it under <Link href="/players#transfers">Transfers &amp; loans</Link> on the Players page, with the club and fee.</li>
+        <li><b>Kit numbers by the viewers:</b> every episode a viewer gets to pick the shirt number of one player. The player page shows the number and who picked it.</li>
+        <li><b>Players move on:</b> when a youngster is sold, loaned out or released, you’ll find it under <Link href="/players#transfers">Transfers &amp; loans</Link> on the Players page, with the club (and the fee for a sale).</li>
       </ul>
 
       <h2>How the stats work</h2>
@@ -60,8 +67,20 @@ export default async function AboutPage() {
         <li><Link href="/records">Records</Link> — record book, fun facts, all-time leaderboards and charts.</li>
         <li><Link href="/seasons">Seasons</Link> — league tables, cup runs and every season’s results.</li>
         <li><Link href="/matches">Matches</Link> — every result, with line-ups and ratings.</li>
-        <li><Link href="/players">Players</Link> — the academy graduates and their career numbers, with transfers &amp; loans at the bottom.</li>
+        <li><Link href="/players">Players</Link> — the academy graduates and their career numbers (filter on in squad, transferred or on loan), with transfers &amp; loans at the bottom.</li>
+        <li><Link href="/search">Search</Link> — find any player (also by kit number, like “#7”) or opponent.</li>
       </ul>
+
+      {olderPublic.length > 0 && (
+        <>
+          <h2>Earlier Youth Editions</h2>
+          <p>
+            {creator.name} has done a Youth Edition with a different club in every game since FIFA 15. The{' '}
+            <Link href="/editions">archive</Link> has the stats of the earlier saves, each in its own club colours, and the{' '}
+            <Link href="/editions/all-time">all-time page</Link> adds them all together.
+          </p>
+        </>
+      )}
 
       <h2>Download the stats</h2>
       <p>
@@ -70,7 +89,7 @@ export default async function AboutPage() {
       </p>
       <ul>
         <li><b>Summary</b> — the career at a glance: record, goals, top scorer and trophies.</li>
-        <li><b>Players</b> — every academy player with apps, goals, assists, POTM, clean sheets and average rating.</li>
+        <li><b>Players</b> — every academy player with kit number, apps, goals, assists, POTM, clean sheets and average rating.</li>
         <li><b>Matches</b> and <b>Line-ups</b> — every result, and every player’s rating, goals and assists per match.</li>
         <li><b>League tables</b>, <b>Transfers</b> and <b>Seasons</b> — including cup runs.</li>
       </ul>
@@ -93,6 +112,11 @@ export default async function AboutPage() {
       <p>
         This is a fan-made website. It isn’t affiliated with EA SPORTS or {club} FC; club names and crests belong to
         their owners. Spotted a mistake in the stats? Let us know in the comments of the latest video.
+      </p>
+      <p>
+        <b>Privacy:</b> you don’t need an account to use this site and it doesn’t ask for or store any personal data
+        from visitors. Visitor numbers are counted with Vercel Web Analytics, which doesn’t use cookies. The only
+        names shown are player names and the viewer names that picked a kit number on the channel.
       </p>
     </div>
   );

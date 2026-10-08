@@ -226,9 +226,10 @@ grant execute on function save_match(jsonb, jsonb) to authenticated;
 grant execute on function save_season(jsonb, jsonb) to authenticated;
 
 -- ───────────────────────── Admins ─────────────────────────
--- Emails allowed to edit (you + the creator). Edit later in Table Editor → admins.
+-- Emails allowed to edit (you + the creator). Put the real emails here only in the Supabase
+-- SQL editor — never commit them — or add them later in Table Editor → admins.
 insert into admins (email) values
-  ('accidnineoneone@gmail.com'),
+  ('you@example.com'),
   ('creator@example.com')
 on conflict do nothing;
 
@@ -381,3 +382,16 @@ end $$;
 
 revoke execute on function save_season(jsonb, jsonb) from public, anon;
 grant execute on function save_season(jsonb, jsonb) to authenticated;
+
+-- ───────────────────────── Viewer credit (010) ─────────────────────────
+-- Kit number credit: the viewer who picked it and in which episode (both optional)
+alter table players add column if not exists kit_chosen_by text;
+alter table players add column if not exists kit_chosen_episode smallint;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'players_kit_chosen_by_len') then
+    alter table players add constraint players_kit_chosen_by_len check (char_length(kit_chosen_by) <= 40);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'players_kit_chosen_episode_check') then
+    alter table players add constraint players_kit_chosen_episode_check check (kit_chosen_episode between 1 and 9999);
+  end if;
+end $$;

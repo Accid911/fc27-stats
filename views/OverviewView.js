@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook, countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, moveFee, MOVE_LABEL, fixture, fixtureText, funFacts, allHonours } from '@/lib/data';
 import Logo from '@/components/Logo';
 import ClubBadge from '@/components/ClubBadge';
-import { SERIES, creatorInfo } from '@/lib/site';
+import { SERIES, creatorInfo, safeUrl } from '@/lib/site';
 import Leaderboard from '@/components/Leaderboard';
 import DemoNotice from '@/components/DemoNotice';
 import { BarList, ColumnChart } from '@/components/Charts';
@@ -84,7 +84,7 @@ export default function OverviewView({ data, base = '', edition = null }) {
             )}
             <p>{edition ? edition.description || `${creator.name}’s ${edition.game} Youth Edition career with ${edition.club} — academy players only.` : creator.tagline}</p>
             <div className="row" style={{ marginTop: 18 }}>
-              <a className="btn yt" href={edition?.youtube_url || creator.channel} target="_blank" rel="noreferrer">▶ Watch {creator.name} on YouTube</a>
+              <a className="btn yt" href={safeUrl(edition?.youtube_url, creator.channel)} target="_blank" rel="noreferrer">▶ Watch {creator.name} on YouTube</a>
               <a className="btn secondary" href={creator.subscribe} target="_blank" rel="noreferrer">Subscribe</a>
               <Link className="btn secondary" href="/about">What is the Youth Edition?</Link>
             </div>

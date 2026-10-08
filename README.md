@@ -43,6 +43,7 @@ Already have a database? Run the migration files you haven't run yet, in order, 
 6. [`007-editions.sql`](supabase/migrations/007-editions.sql) — all 13 Youth Editions (FIFA 15 Newport County → FC 27 Leicester City). Everything already in the database becomes edition #13 (Leicester); the 12 older editions start empty and **hidden**.
 7. [`008-catch-up.sql`](supabase/migrations/008-catch-up.sql) — safe repair, run after 007: adds anything from 005/006 that was skipped and refreshes the API. Can be run any number of times. (After 007, don't run 006 itself anymore — use 008.)
 8. [`009-kit-numbers.sql`](supabase/migrations/009-kit-numbers.sql) — kit numbers for players (optional per player)
+9. [`010-viewer-credit.sql`](supabase/migrations/010-viewer-credit.sql) — who picked a kit number and in which episode
 
 ## 3. Set up Supabase (the database)
 
@@ -105,6 +106,20 @@ SparringDK did a Youth Edition every year since FIFA 15. Each one works exactly 
 **Going public:** Admin → **Editions** → *Details* → tick **Public** → *Save edition*. There you can also add a crest image URL, a YouTube link and a short intro. Make them public one by one, or all at once when everything is filled in.
 
 **Personalising an edition:** add an entry for the edition number in [`lib/themes.js`](lib/themes.js) (club colours, crest in `public/crests/`, nickname, stadium). That edition's pages then get the club's colours, its crest and name top left, its crest as browser-tab icon and its own link-preview image. Edition #12 (Cambridge United) is personalised; the others use the normal look until they get an entry. The main Leicester site never changes.
+
+## Keep-alive (database never pauses)
+
+Free Supabase projects pause after a week without activity. `vercel.json` makes Vercel call `/api/keepalive` once a day,
+which reads one tiny row. Optional: add an environment variable `CRON_SECRET` (any long random text) on Vercel —
+then only Vercel's own daily call can use that address.
+
+## Security & privacy
+
+- Visitors can only **read** public stats; all writing is blocked by the database (Row Level Security) unless you're signed in as an admin.
+- The `admins` table (your email) can't be read through the public API.
+- Hidden editions can't be read by visitors at all — not even through the API.
+- Never put real emails or passwords in this repository. Add admin emails in Supabase (Table Editor → admins).
+- In Supabase → Authentication, keep **new sign-ups turned off**.
 
 ## Speed & caching
 

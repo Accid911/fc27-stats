@@ -322,3 +322,17 @@ td .fixture > :nth-child(3) { overflow: hidden; text-overflow: ellipsis; }
 .club-facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
 .club-facts span { font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--text); }
 .club-facts span b { color: var(--accent); font-weight: 600; margin-right: 4px; }
+
+/* Kit number credit (player page) */
+.kit-credit { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.kit-credit b { color: var(--text); }
+
+/* Search */
+.search-input { width: 100%; font-size: 18px; padding: 14px 16px; border-radius: 12px; }
+.search-results { list-style: none; margin: 0; padding: 0; }
+.search-results li + li { border-top: 1px solid var(--border); }
+.search-results a { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; }
+.search-results a:hover { background: var(--surface-2); }
+.search-results .sr-main { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
+.search-results .sr-main .kit-no { font-size: 12px; height: 20px; min-width: 24px; margin-right: 8px; }
+.search-results .sr-side { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; }

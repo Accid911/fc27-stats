@@ -1,7 +1,8 @@
 import { ImageResponse } from 'next/og';
 import { loadEdition } from '@/lib/server-data';
 import { buildModel, teamRecord } from '@/lib/data';
-import { editionTheme } from '@/lib/themes';
+import { editionTheme, badgeDataUrl } from '@/lib/themes';
+import { clubInitials } from '@/lib/editions';
 import { OG_SIZE, OgFrame, OgStat, ogAssets } from '@/lib/og';
 
 export const size = OG_SIZE;
@@ -19,7 +20,10 @@ export default async function Image({ params }) {
   } catch {}
   const edition = data?.edition || null;
   const theme = editionTheme(edition);
-  const { crest, fonts } = await ogAssets(theme?.crest || '/crest.png');
+  const assets = await ogAssets(theme?.crest || '/crest.png');
+  const { fonts } = assets;
+  // No crest yet → the initials badge in club colours
+  const crest = theme && !theme.crest ? badgeDataUrl(theme, clubInitials(edition.club)) : assets.crest;
   const colors = theme
     ? { bg: theme.colors.bg, royal: theme.colors.ogGlow || theme.colors.accent, gold: theme.colors.gold, text: theme.colors.text, muted: theme.colors.muted, card: theme.colors.surface2 }
     : null;

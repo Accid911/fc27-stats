@@ -179,6 +179,8 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
   const [f, setF] = useState({
     name: player.name,
     kit: player.kit_number != null ? String(player.kit_number) : '',
+    kitBy: player.kit_chosen_by || '',
+    kitEp: player.kit_chosen_episode != null ? String(player.kit_chosen_episode) : '',
     position: player.position || '',
     country: player.country || '',
     joined_season_id: player.joined_season_id || '',
@@ -195,11 +197,16 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
     setError('');
     try {
       const kit = parseKit(f.kit);
+      const kitBy = f.kitBy.trim().slice(0, 40) || null;
+      const kitEp = f.kitEp ? Number(f.kitEp) : null;
       await api.save('players', {
         id: player.id,
         name: capitalizeName(f.name.trim()),
         // only send the field when there is (or was) a number, so the form still works before migration 009
         ...(kit != null || player.kit_number != null ? { kit_number: kit } : {}),
+        // who picked the number (migration 010) — only sent when filled in or previously set
+        ...(kitBy || player.kit_chosen_by ? { kit_chosen_by: kitBy } : {}),
+        ...(kitEp || player.kit_chosen_episode != null ? { kit_chosen_episode: kitEp } : {}),
         position: f.position || null,
         country: capitalizeName(f.country.trim()) || null,
         joined_season_id: f.joined_season_id || null,
@@ -255,6 +262,14 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
         <div className="form-grid">
           <label>Name *<input value={f.name} onChange={(e) => setF({ ...f, name: capitalizeName(e.target.value) })} required /></label>
           <KitField value={f.kit} onChange={(v) => setF({ ...f, kit: v })} model={model} exceptId={player.id} />
+          <label>
+            Number picked by
+            <input value={f.kitBy} onChange={(e) => setF({ ...f, kitBy: e.target.value })} placeholder="viewer name, e.g. @username" maxLength={40} autoComplete="off" />
+          </label>
+          <label>
+            In episode
+            <input value={f.kitEp} onChange={(e) => setF({ ...f, kitEp: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) })} placeholder="e.g. 12" inputMode="numeric" />
+          </label>
           <label>
             Position
             <select value={f.position} onChange={(e) => setF({ ...f, position: e.target.value })}>

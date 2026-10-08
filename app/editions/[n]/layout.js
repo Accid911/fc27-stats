@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { listEditions, loadSettings } from '@/lib/server-data';
-import { creatorInfo } from '@/lib/site';
-import { editionTheme, themeCss } from '@/lib/themes';
+import { creatorInfo, safeUrl } from '@/lib/site';
+import { editionTheme, themeCss, badgeDataUrl } from '@/lib/themes';
+import { clubInitials, crestUrl } from '@/lib/editions';
 import ClubBadge from '@/components/ClubBadge';
 import EditionNav from '@/components/EditionNav';
 import DefaultChrome from '@/components/DefaultChrome';
@@ -26,7 +27,11 @@ export async function generateMetadata({ params }) {
   if (!edition || !theme) return {};
   return {
     title: { default: `${edition.club} · Youth Edition #${edition.number}`, template: `%s · ${edition.club} Youth Edition` },
-    icons: { icon: theme.crest, apple: theme.crest },
+    // the crest, or (no crest yet) the initials badge in club colours
+    icons: (() => {
+      const icon = crestUrl(edition) || badgeDataUrl(theme, clubInitials(edition.club));
+      return { icon, apple: icon };
+    })(),
   };
 }
 
@@ -81,8 +86,9 @@ export default async function EditionLayout({ children, params }) {
         [`${base}/players`, 'Players'],
         [`${base}/records`, 'Records'],
         ['/editions', 'All editions', true],
+        ['/search', 'Search', true],
       ]}
-      channel={edition.youtube_url || creator.channel}
+      channel={safeUrl(edition.youtube_url, creator.channel)}
       footer={{ clubName: edition.club, creator, game: edition.game, exportHref: `/api/export?edition=${edition.number}` }}
     >
       {banner}

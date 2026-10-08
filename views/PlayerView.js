@@ -68,6 +68,12 @@ export default function PlayerView({ data, id, base = '', edition = null }) {
         <span className={`badge ${STATUS_BADGE[st.status]}`}>{statusText(st)}</span>
         {all.hatTricks > 0 && <span className="badge gold">{all.hatTricks} hat-trick{all.hatTricks > 1 ? 's' : ''}</span>}
       </div>
+      {player.kit_number != null && player.kit_chosen_by && (
+        <p className="kit-credit">
+          #{player.kit_number} picked by <b>{player.kit_chosen_by}</b>
+          {player.kit_chosen_episode ? <> in episode {player.kit_chosen_episode}</> : null}
+        </p>
+      )}
 
       <section className="section grid grid-kpi">
         {kpis.map(([label, value]) => (
