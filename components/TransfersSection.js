@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { formatMoney, seasonLabel, MOVE_LABEL, statusText, moveFee } from '@/lib/data';
 import { Kpi } from '@/components/StatCards';
+import TransfersTable from '@/components/TransfersTable';
+import { positionOrder } from '@/lib/constants';
 
 const TYPE_BADGE = { sold: 'gold', loan: 'blue', loan_return: 'green', released: '' };
 
@@ -10,6 +12,28 @@ export default function TransfersSection({ model, data, base = '' }) {
   const sales = model.moves.filter((mv) => mv.type === 'sold');
   const income = sales.reduce((a, mv) => a + Number(mv.fee || 0), 0);
   const loans = model.moves.filter((mv) => mv.type === 'loan').length;
+  // plain rows for the sortable table (oldest move = order 0)
+  const rows = model.moves.map((mv, i) => {
+    const fee = moveFee(mv);
+    return {
+      id: mv.id,
+      order: i,
+      seasonNo: mv.season?.number ?? null,
+      season: mv.season ? seasonLabel(mv.season) : '',
+      seasonHref: mv.season ? `${base}/seasons/${mv.season.id}` : null,
+      date: mv.moved_on || '',
+      player: mv.player.name,
+      playerHref: `${base}/players/${mv.player_id}`,
+      pos: mv.player.position || '',
+      posOrder: mv.player.position ? positionOrder(mv.player.position) : null,
+      what: MOVE_LABEL[mv.type],
+      badge: TYPE_BADGE[mv.type],
+      club: mv.club || '',
+      fee: fee != null ? Number(fee) : null,
+      feeText: fee != null ? formatMoney(fee, model.currency) : '—',
+      now: statusText(model.statusById[mv.player_id]),
+    };
+  });
   const onLoan = data.players.filter((p) => model.statusById[p.id]?.status === 'loan');
 
   return (
@@ -41,27 +65,7 @@ export default function TransfersSection({ model, data, base = '' }) {
           {moves.length === 0 ? (
             <p className="muted" style={{ padding: 20, margin: 0 }}>No transfers or loans yet.</p>
           ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr><th>Season</th><th>Date</th><th>Player</th><th>Pos</th><th>What</th><th>Club</th><th className="num">Fee</th><th>Now</th></tr>
-                </thead>
-                <tbody>
-                  {moves.map((mv) => (
-                    <tr key={mv.id}>
-                      <td>{mv.season ? <Link href={`${base}/seasons/${mv.season.id}`}>{seasonLabel(mv.season)}</Link> : '—'}</td>
-                      <td className="muted">{mv.moved_on || '—'}</td>
-                      <td><Link href={`${base}/players/${mv.player_id}`}>{mv.player.name}</Link></td>
-                      <td className="muted">{mv.player.position}</td>
-                      <td><span className={`badge ${TYPE_BADGE[mv.type]}`}>{MOVE_LABEL[mv.type]}</span></td>
-                      <td>{mv.club || '—'}</td>
-                      <td className="num" style={{ fontWeight: 700 }}>{moveFee(mv) != null ? formatMoney(moveFee(mv), model.currency) : '—'}</td>
-                      <td className="muted">{statusText(model.statusById[mv.player_id])}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <TransfersTable rows={rows} />
           )}
         </div>
       </div>

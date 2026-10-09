@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { buildModel, playerStats, seasonLabel, statusText, formatMoney, moveFee, STATUS_BADGE, MOVE_LABEL } from '@/lib/data';
+import { buildModel, playerStats, seasonLabel, statusText, formatMoney, moveFee, fixtureText, STATUS_BADGE, MOVE_LABEL } from '@/lib/data';
+import RatingChart from '@/components/RatingChart';
 import SortableTable from '@/components/SortableTable';
 import Fixture from '@/components/Fixture';
 import DemoNotice from '@/components/DemoNotice';
@@ -40,6 +41,22 @@ export default function PlayerView({ data, id, base = '', edition = null }) {
     .map((m) => ({ m, r: m.lineup.find((x) => x.player_id === id) }))
     .filter((x) => x.r)
     .reverse();
+
+  // Rating in every match he got one, oldest first (for the graph)
+  const ratingPoints = model.matches
+    .map((m) => ({ m, r: m.lineup.find((x) => x.player_id === id) }))
+    .filter((x) => x.r && x.r.rating != null && x.r.rating !== '')
+    .map(({ m, r }) => ({
+      id: m.id,
+      rating: Number(r.rating),
+      result: m.result,
+      season: m.season.number,
+      label: `S${m.season.number} · ${fixtureText(m, model.clubName)}`,
+      sub: [m.tournament, r.goals ? `${r.goals} goal${r.goals > 1 ? 's' : ''}` : null, r.assists ? `${r.assists} assist${r.assists > 1 ? 's' : ''}` : null, r.potm ? '★ Player of the Match' : null]
+        .filter(Boolean)
+        .join(' · '),
+      href: `${base}/matches/${m.id}`,
+    }));
 
   const kpis = [
     ['Apps', all.apps],
@@ -83,6 +100,15 @@ export default function PlayerView({ data, id, base = '', edition = null }) {
           </div>
         ))}
       </section>
+
+      {ratingPoints.length >= 2 && (
+        <section className="section">
+          <h2>Rating per match</h2>
+          <div className="card">
+            <RatingChart points={ratingPoints} />
+          </div>
+        </section>
+      )}
 
       <section className="section">
         <h2>Season by season</h2>

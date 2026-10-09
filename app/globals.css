@@ -336,3 +336,30 @@ td .fixture > :nth-child(3) { overflow: hidden; text-overflow: ellipsis; }
 .search-results .sr-main { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
 .search-results .sr-main .kit-no { font-size: 12px; height: 20px; min-width: 24px; margin-right: 8px; }
 .search-results .sr-side { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; }
+
+/* Rating per match (player page) */
+.rating-chart { position: relative; }
+.rating-chart svg { width: 100%; height: auto; display: block; touch-action: manipulation; }
+.rating-chart .grid { stroke: var(--border); stroke-width: 1; }
+.rating-chart .tick { fill: var(--muted); font-size: 13px; font-family: var(--font-body); }
+.rating-chart .season-line { stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.rating-chart .season-label { fill: var(--muted); font-size: 13px; font-weight: 700; font-family: var(--font-body); }
+.rating-chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-opacity: .55; stroke-linejoin: round; }
+.rating-chart .avg { fill: none; stroke: var(--gold); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.rating-chart .dot { stroke: var(--surface); stroke-width: 1.5; }
+.rating-chart .dot.W { fill: var(--win); }
+.rating-chart .dot.D { fill: var(--draw); }
+.rating-chart .dot.L { fill: var(--loss); }
+.rating-tip {
+  position: absolute; min-width: 180px; max-width: 280px; z-index: 2;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px;
+  font-size: 13px; box-shadow: 0 10px 24px rgba(0, 0, 0, .45); pointer-events: auto;
+}
+.rating-tip b { font-family: var(--font-display); font-size: 22px; }
+.rating-tip .result { vertical-align: 3px; margin-left: 4px; }
+.rating-tip .link { display: inline-block; margin-top: 4px; }
+.rating-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.rating-legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
+.rating-legend .lg-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--win); box-shadow: 12px 0 0 var(--draw), 24px 0 0 var(--loss); margin-right: 30px; }
+.rating-legend .lg-avg { width: 18px; height: 3px; border-radius: 2px; background: var(--gold); }
+@media (max-width: 600px) { .rating-tip { position: static; transform: none !important; max-width: none; margin-top: 8px; } }
