@@ -12,9 +12,10 @@ export async function generateMetadata({ params }) {
   return { ...m, title: `${m.title || 'Archive'} · ${data.edition.game}` };
 }
 
-export default async function Page({ params }) {
+export default async function Page({ params, searchParams }) {
   const { n, id } = await params;
+  const { log } = await searchParams;
   const data = await loadEdition(n);
   if (!data) return <ArchiveLocked />;
-  return <PlayerView data={data} id={id} base={`/editions/${n}`} edition={data.edition} />;
+  return <PlayerView data={data} id={id} base={`/editions/${n}`} edition={data.edition} fullLog={log === 'all'} />;
 }

@@ -12,7 +12,8 @@ export async function generateMetadata({ params }) {
   }
 }
 
-export default async function Page({ params }) {
+export default async function Page({ params, searchParams }) {
   const { id } = await params;
-  return <PlayerView data={await loadAll()} id={id} />;
+  const { log } = await searchParams;
+  return <PlayerView data={await loadAll()} id={id} fullLog={log === 'all'} />;
 }

@@ -6,6 +6,9 @@ import SortableTable from '@/components/SortableTable';
 import Fixture from '@/components/Fixture';
 import DemoNotice from '@/components/DemoNotice';
 
+// The match log shows the latest matches; the full list is one click away (keeps long careers light).
+const LOG_LIMIT = 30;
+
 export function metaFor(data, id) {
   try {
     const model = buildModel(data);
@@ -22,7 +25,7 @@ export function metaFor(data, id) {
   }
 }
 
-export default function PlayerView({ data, id, base = '', edition = null }) {
+export default function PlayerView({ data, id, base = '', edition = null, fullLog = false }) {
   const model = buildModel(data);
   const player = model.playerById[id];
   if (!player) notFound();
@@ -159,6 +162,15 @@ export default function PlayerView({ data, id, base = '', edition = null }) {
 
       <section className="section">
         <h2>Match log</h2>
+        {log.length > LOG_LIMIT && (
+          <p className="muted" style={{ marginTop: -6 }}>
+            {fullLog ? (
+              <>All {log.length} matches · <Link className="link" href={`${base}/players/${id}`} scroll={false}>Show only the latest {LOG_LIMIT}</Link></>
+            ) : (
+              <>Latest {LOG_LIMIT} of {log.length} matches · <Link className="link" href={`${base}/players/${id}?log=all`} scroll={false}>Show all</Link></>
+            )}
+          </p>
+        )}
         <div className="card pad-0">
           {log.length === 0 ? (
             <p className="muted" style={{ padding: 20, margin: 0 }}>Hasn’t played yet.</p>
@@ -169,7 +181,7 @@ export default function PlayerView({ data, id, base = '', edition = null }) {
                   <tr><th>Season</th><th>Tournament</th><th>Match</th><th></th><th className="num">Rating</th><th className="num">G</th><th className="num">A</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {log.map(({ m, r }) => (
+                  {(fullLog ? log : log.slice(0, LOG_LIMIT)).map(({ m, r }) => (
                     <tr key={m.id} className={r.potm ? 'is-potm' : ''}>
                       <td className="muted">S{m.season.number}</td>
                       <td className="muted">{m.tournament || '—'}</td>

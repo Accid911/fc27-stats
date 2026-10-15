@@ -5,7 +5,9 @@ import DemoNotice from '@/components/DemoNotice';
 
 export default function MatchesView({ data, season, base = '', edition = null }) {
   const model = buildModel(data);
-  const selected = season && model.seasonById[season] ? season : '';
+  // Newest season by default (a long career has hundreds of matches); "All" shows everything.
+  const latest = model.seasons[model.seasons.length - 1]?.id || '';
+  const selected = season === 'all' ? '' : season && model.seasonById[season] ? season : latest;
   const matches = model.matches.filter((m) => !selected || m.season_id === selected).reverse();
 
   return (
@@ -14,12 +16,12 @@ export default function MatchesView({ data, season, base = '', edition = null })
       <div className="eyebrow">Results</div>
       <h1 style={{ marginBottom: 16 }}>Matches</h1>
       <div className="chips" style={{ marginBottom: 20 }}>
-        <Link className="chip" href={`${base}/matches`} style={!selected ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined}>All</Link>
+        <Link className="chip" href={`${base}/matches?season=all`} style={!selected ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined}>All</Link>
         {[...model.seasons].reverse().map((s) => (
           <Link
             key={s.id}
             className="chip"
-            href={`${base}/matches?season=${s.id}`}
+            href={s.id === latest ? `${base}/matches` : `${base}/matches?season=${s.id}`}
             style={selected === s.id ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined}
           >
             {seasonLabel(s)}
