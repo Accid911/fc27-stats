@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { loadArchive } from '@/lib/server-data';
-import { buildModel, teamRecord, playerStats, topBy, allHonours, leagueTable, ordinal, seasonLabel } from '@/lib/data';
+import { buildModel, teamRecord, playerStats, topBy, allHonours, leagueTable, ordinal, seasonLabel, seasonPlayoff } from '@/lib/data';
 import { editionPath } from '@/lib/editions';
 import ClubBadge from '@/components/ClubBadge';
 import ArchiveLocked from '@/components/ArchiveLocked';
@@ -186,7 +186,10 @@ export default async function AllTimePage() {
                       <td className="muted">#{edition.number} {edition.club}</td>
                       <td><Link href={`${editionPath(edition)}/seasons/${season.id}`}>{seasonLabel(season)}</Link></td>
                       <td>{season.tournament}</td>
-                      <td>{club ? ordinal(club.pos) : '—'}</td>
+                      <td>
+                        {club ? ordinal(club.pos) : '—'}
+                        {seasonPlayoff(season, club?.pos ?? null)?.promoted && <span className="badge gold" style={{ marginLeft: 6 }}>Play-off winners</span>}
+                      </td>
                       <td className="num">{club ? club.points : '—'}</td>
                     </tr>
                   ))

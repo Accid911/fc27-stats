@@ -1,4 +1,4 @@
-import { buildModel, teamRecord, leagueTable, playerStats, topBy, ordinal, seasonLabel, seasonHonours } from '@/lib/data';
+import { buildModel, teamRecord, leagueTable, playerStats, topBy, ordinal, seasonLabel, seasonHonours, seasonPlayoff } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import DemoNotice from '@/components/DemoNotice';
 
@@ -18,7 +18,12 @@ export default function SeasonsView({ data, base = '', edition = null }) {
       name: seasonLabel(s),
       tournament: s.tournament,
       pos: t?.pos ?? null,
-      posLabel: t ? ordinal(t.pos) : '—',
+      posLabel: (() => {
+        const po = seasonPlayoff(s, t?.pos ?? null);
+        const base = t ? ordinal(t.pos) : '—';
+        if (!po) return base;
+        return `${base} · ${po.promoted ? 'promoted via play-offs' : po.won ? 'won the play-off' : `play-offs: ${po.result === 'Lost' ? 'lost' : po.result.toLowerCase()}`}`;
+      })(),
       points: t?.points ?? null,
       P: r.P,
       record: `${r.W}-${r.D}-${r.L}`,

@@ -56,7 +56,7 @@ export default async function AboutPage() {
         <li><b>Clean sheets</b> count for goalkeepers and defenders who played in a match where nothing was conceded.</li>
         <li>Cup matches decided by a <b>penalty shoot-out</b> count as a win or a loss (shown as e.g. “1–1 (5–4 pens)”).</li>
         <li>League tables are copied from the game at the end of each season (or during it).</li>
-        <li><b>Trophies</b> are automatic: a cup marked “Winner” or finishing top of the league puts it in the trophy cabinet.</li>
+        <li><b>Trophies</b> are automatic: a cup marked “Winner”, finishing top of the league or winning the promotion <b>play-offs</b> puts it in the trophy cabinet.</li>
         <li>Every player shows the season he <b>joined the first team</b>, so you can follow each academy intake.</li>
         <li>Away matches are shown with the home team first, like on a real fixture list.</li>
       </ul>

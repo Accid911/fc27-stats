@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { buildModel, teamRecord, leagueTable, playerStats, ordinal, seasonLabel, formatMoney, moveFee, MOVE_LABEL, seasonHonours } from '@/lib/data';
+import { buildModel, teamRecord, leagueTable, playerStats, ordinal, seasonLabel, formatMoney, moveFee, MOVE_LABEL, seasonHonours, seasonPlayoff } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import MatchTable from '@/components/MatchTable';
 import DemoNotice from '@/components/DemoNotice';
@@ -37,7 +37,9 @@ export default function SeasonView({ data, id, base = '', edition = null }) {
     .filter((p) => model.joinedById[p.id]?.season.id === id)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const tournaments = [...new Set([season.tournament, ...(season.cups || []), ...matches.map((m) => m.tournament || '—')])];
+  const playoff = seasonPlayoff(season, table.club?.pos ?? null);
+  // league, play-offs (only when we were in them or played a play-off match), cups, and anything else logged
+  const tournaments = [...new Set([season.tournament, ...(playoff ? [playoff.name] : []), ...(season.cups || []), ...matches.map((m) => m.tournament || '—')])];
   const moves = model.moves.filter((mv) => mv.season_id === id).reverse();
 
   return (
@@ -52,6 +54,14 @@ export default function SeasonView({ data, id, base = '', edition = null }) {
         <span className="badge">{r.CS} clean sheets</span>
         {trophies.map((t) => <span key={t.id} className="badge gold">🏆 {t.name}</span>)}
       </div>
+      {playoff && (
+        <div className="row" style={{ marginTop: 10, gap: 8 }}>
+          <span className="muted" style={{ fontSize: 14 }}>Play-offs:</span>
+          <span className={`badge ${playoff.promoted ? 'gold' : playoff.won ? 'green' : ''}`}>
+            {playoff.name} · {playoff.promoted ? '🏆 ' : ''}{playoff.label}
+          </span>
+        </div>
+      )}
       {season.cups?.length > 0 && (
         <div className="row" style={{ marginTop: 10, gap: 8 }}>
           <span className="muted" style={{ fontSize: 14 }}>Cups:</span>

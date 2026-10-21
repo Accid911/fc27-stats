@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { buildModel, isClub, leagueTable, ordinal, seasonLabel, CUP_RESULTS } from '@/lib/data';
-import { CUPS, LEAGUES } from '@/lib/constants';
+import { buildModel, isClub, leagueTable, ordinal, seasonLabel, seasonPlayoff, CUP_RESULTS } from '@/lib/data';
+import { CUPS, LEAGUES, playoffFor } from '@/lib/constants';
 
 export default function SeasonEditor({ data, api, onChanged, edition = null }) {
   const model = useMemo(() => buildModel(data), [data]);
@@ -61,7 +61,9 @@ export default function SeasonEditor({ data, api, onChanged, edition = null }) {
                   <tr key={s.id}>
                     <td style={{ fontWeight: 600 }}>{seasonLabel(s)}</td>
                     <td>{s.tournament}</td>
-                    <td className="muted" style={{ whiteSpace: 'normal' }}>{(s.cups || []).join(', ') || '—'}</td>
+                    <td className="muted" style={{ whiteSpace: 'normal' }}>
+                      {[...(s.cups || []), ...(seasonPlayoff(s) ? [`${seasonPlayoff(s).name}: ${seasonPlayoff(s).label}`] : [])].join(', ') || '—'}
+                    </td>
                     <td className="num">{t.rows.length}</td>
                     <td>{t.club ? `${ordinal(t.club.pos)} · ${t.club.points} pts` : '—'}</td>
                     <td className="num">{model.matches.filter((m) => m.season_id === s.id).length}</td>
@@ -102,6 +104,7 @@ function SeasonForm({ model, initial, api, onCancel, onSaved, edition = null }) 
   const [cups, setCups] = useState(() => initial.cups ?? last?.cups ?? ['FA Cup', 'EFL Cup']);
   const [cupResults, setCupResults] = useState(() => ({ ...(initial.cup_results || {}) }));
   const [otherCup, setOtherCup] = useState('');
+  const playoff = playoffFor(tournament); // play-offs of the chosen league (if it has them)
   const leagueOptions = LEAGUES.includes(tournament) ? LEAGUES : [...LEAGUES, tournament];
   const cupOptions = [...CUPS, ...cups.filter((c) => !CUPS.includes(c))];
   const toggleCup = (c) => setCups((cs) => (cs.includes(c) ? cs.filter((x) => x !== c) : [...cs, c]));
@@ -207,7 +210,9 @@ function SeasonForm({ model, initial, api, onCancel, onSaved, edition = null }) 
           number: n,
           tournament: tournament.trim() || 'Premier League',
           cups,
-          cup_results: Object.fromEntries(cups.filter((c) => cupResults[c]).map((c) => [c, cupResults[c]])),
+          cup_results: Object.fromEntries(
+            [...cups, ...(playoff ? [playoff.name] : [])].filter((c) => cupResults[c]).map((c) => [c, cupResults[c]])
+          ),
           notes: notes || null,
         },
         rows.filter((r) => r.team.trim()).map((r) => ({
@@ -281,6 +286,23 @@ function SeasonForm({ model, initial, api, onCancel, onSaved, edition = null }) 
             </div>
             <p className="muted" style={{ fontSize: 13, margin: '10px 0 0' }}>
               The league title is automatic too: finish top of the league table below and it’s added to the trophy cabinet.
+            </p>
+          </div>
+        )}
+
+        {playoff && (
+          <div style={{ marginTop: 16 }}>
+            <div className="form-grid">
+              <label>
+                {playoff.name}
+                <select value={cupResults[playoff.name] || ''} onChange={(e) => setCupResults((r) => ({ ...r, [playoff.name]: e.target.value }))}>
+                  <option value="">— not in the play-offs / not yet</option>
+                  {playoff.results.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+                </select>
+              </label>
+            </div>
+            <p className="muted" style={{ fontSize: 13, margin: '8px 0 0' }}>
+              Play-off places in the {tournament}: {playoff.places}. Play-off matches can be logged under “{playoff.name}” in the Matches tab.
             </p>
           </div>
         )}
