@@ -47,15 +47,22 @@ export default function SearchBox({ index, initial = '' }) {
     window.history.replaceState(null, '', url);
   }, [q]);
 
-  const { players, opponents } = useMemo(() => {
+  const { players, opponents, episodes } = useMemo(() => {
     const n = norm(q);
-    if (n.length < 2) return { players: [], opponents: [] };
+    // "ep 12", "ep12", "episode 12"
+    const epMatch = n.match(/^ep(?:isode)?\.?\s*(\d{1,4})$/);
+    if (epMatch) {
+      const ep = Number(epMatch[1]);
+      const rows = (index.episodes || []).filter((r) => r.ep === ep).sort((a, b) => Number(b.current) - Number(a.current));
+      return { players: [], opponents: [], episodes: rows };
+    }
+    if (n.length < 2) return { players: [], opponents: [], episodes: [] };
     const hit = (r) => norm(r.name).includes(n) || (r.kit != null && String(r.kit) === n.replace('#', ''));
     const rank = (a, b) => Number(norm(b.name).startsWith(n)) - Number(norm(a.name).startsWith(n)) || Number(b.current) - Number(a.current) || a.name.localeCompare(b.name);
-    return { players: index.players.filter(hit).sort(rank), opponents: index.opponents.filter(hit).sort(rank) };
+    return { players: index.players.filter(hit).sort(rank), opponents: index.opponents.filter(hit).sort(rank), episodes: [] };
   }, [q, index]);
 
-  const tooShort = norm(q).length < 2;
+  const tooShort = norm(q).length < 2 && !episodes.length;
   return (
     <>
       <input
@@ -64,18 +71,19 @@ export default function SearchBox({ index, initial = '' }) {
         className="search-input"
         value={q}
         onChange={(e) => setQ(e.target.value.slice(0, 60))}
-        placeholder="Type a player or club name, or a kit number like #7"
+        placeholder="A player or club name, a kit number like #7, or an episode like ep 12"
         aria-label="Search players and opponents"
       />
       {tooShort ? (
         <p className="muted" style={{ marginTop: 14 }}>
           {index.players.length} players and {index.opponents.length} opponents to search.
         </p>
-      ) : players.length + opponents.length === 0 ? (
+      ) : players.length + opponents.length + episodes.length === 0 ? (
         <p className="muted" style={{ marginTop: 14 }}>Nothing found for “{q}”.</p>
       ) : null}
       <Results title="Players" rows={players} q={q} />
       <Results title="Opponents" rows={opponents} q={q} />
+      <Results title="Episodes" rows={episodes} q={q} />
     </>
   );
 }

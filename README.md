@@ -44,6 +44,7 @@ Already have a database? Run the migration files you haven't run yet, in order, 
 7. [`008-catch-up.sql`](supabase/migrations/008-catch-up.sql) — safe repair, run after 007: adds anything from 005/006 that was skipped and refreshes the API. Can be run any number of times. (After 007, don't run 006 itself anymore — use 008.)
 8. [`009-kit-numbers.sql`](supabase/migrations/009-kit-numbers.sql) — kit numbers for players (optional per player)
 9. [`010-viewer-credit.sql`](supabase/migrations/010-viewer-credit.sql) — who picked a kit number and in which episode
+10. [`011-scouting-subs-overall.sql`](supabase/migrations/011-scouting-subs-overall.sql) — scouting trips (country + viewer who suggested it, players can be linked to a trip), episode number per match, substitutions (started / came on, for whom, minute), loan length (short / 1 year / 2 years) and overall ratings over time. Only adds things; existing data stays as it is.
 
 ## 3. Set up Supabase (the database)
 
@@ -76,12 +77,14 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 |---|---|
 | `editions` | The 13 Youth Editions: game, club, crest, YouTube link, intro, public or hidden |
 | `settings` | Club name, creator name, tagline, YouTube link |
-| `players` | Name, kit number (optional), position, country, season he joined the first team |
-| `player_moves` | Transfers & loans: sold / loaned out / back from loan / released, club, fee, season, date |
+| `players` | Name, kit number (optional), position, country, season he joined the first team, scouting trip he was found on |
+| `player_moves` | Transfers & loans: sold / loaned out / back from loan / released, club, fee, loan length, season, date |
+| `player_overalls` | Overall rating over time: season, when (signed / start / during / end of season), episode, overall |
+| `scouting` | Countries the viewers chose to scout: season, country, who suggested it, episode |
 | `seasons` | Season number, league (EFL League Two → Premier League), cups played and how far we got in each, notes |
 | `standings` | The league table for a season: team, W, D, L, GF, GA, points |
-| `matches` | Season, tournament, opponent, score, penalties (cup draws), home/away, date, video link |
-| `match_players` | Who played in a match: rating, goals, assists, Player of the Match |
+| `matches` | Season, episode, tournament, opponent, score, penalties (cup draws), home/away, date, video link |
+| `match_players` | Who played in a match: rating, goals, assists, Player of the Match, started or came on (for whom, minute) |
 | `trophies` | Extra trophies only — league titles (top of the table) and cup wins (“Winner”) are automatic |
 
 ## Using the admin
@@ -89,7 +92,9 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 - **Players** — fill in name, position, country, the season he joined (defaults to the latest) and press Enter. Clean sheets are counted automatically for goalkeepers and defenders. Click **Edit / transfer** to change details or to **Sell**, **Loan out**, bring **Back from loan** or **Release** a player (club, fee like `12.5m` or `850k`, season, date). Undo a move by removing it from the history.
 - **Seasons** — *New season* pre-fills the next number, last season's league, cups and teams. Pick the league, click the cups played and set how far you got (*Winner* puts the cup in the trophy cabinet), fill in W/D/L/GF/GA/points (points auto-fill as 3×W + D), or **Paste a list** (`Arsenal 38 26 6 6 80 30 50 84` or just `Arsenal 84`). Leicester's row can be filled in from the logged league matches.
 - **Play-offs** — leagues with play-offs (National League, League Two, League One, Championship, 3. Liga, 2. Bundesliga, Bundesliga) get a play-off result in the season form; play-off matches are logged under e.g. “League One Play-offs”. Winning promotion play-offs is added to the trophy cabinet. No database change needed (saved with the cup results).
-- **Matches** — the tournament list is the season's league + cups. Pick the opponent and home/away (away games show the opponent first), type the score — a drawn cup match shows penalty boxes — click players to add them (or **Same players as last match**), then set each player's rating, goals (+/−), assists (+/−) and tap ★ for Player of the Match.
+- **Matches** — the tournament list is the season's league + cups. Pick the opponent and home/away (away games show the opponent first), type the score — a drawn cup match shows penalty boxes — click players to add them (or **Same players as last match**), then set each player's rating, goals (+/−), assists (+/−) and tap ★ for Player of the Match. The first 11 players added are marked **Started**, the rest **Came on** — pick who they replaced and the minute (both optional). The **Episode** field remembers the last episode you entered.
+- **Scouting** — per season: the country the viewers picked, who suggested it and the episode. Link players to a trip with **Found when scouting** in the Players tab.
+- **Overall rating** — type the overall when adding a player (“Overall when signed”), then add more in the player's **Overall rating** box (start / during / end of a season). The player page draws the graph; Records shows the biggest improvers.
 
 - **Excel download (public)** — anyone can download all stats until now as an Excel file: button on the Records page and in the footer (`/api/export`).
 - **Backup** — download a full backup of every edition (.json) or a readable spreadsheet (.xlsx); restore a .json backup if something goes wrong. The admin reminds you when the last backup is more than 14 days old.

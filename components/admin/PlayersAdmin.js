@@ -2,8 +2,8 @@
 
 import { useMemo, useRef, useState } from 'react';
 import {
-  buildModel, formatMoney, moveFee, parseMoney, seasonLabel, statusText,
-  MOVE_LABEL, STATUS_BADGE, STATUS_LABEL,
+  buildModel, formatMoney, loanLengthLabel, momentLabel, moveFee, parseMoney, seasonLabel, statusText,
+  LOAN_LENGTHS, MOVE_LABEL, OVR_MOMENTS, STATUS_BADGE, STATUS_LABEL,
 } from '@/lib/data';
 import { COUNTRIES, POSITIONS, capitalizeName, positionOrder } from '@/lib/constants';
 
@@ -22,6 +22,32 @@ function kitTakenBy(model, kit, exceptId) {
   if (kit == null || Number.isNaN(kit)) return null;
   return model.data.players.find(
     (p) => p.id !== exceptId && Number(p.kit_number) === kit && ['squad', 'loan'].includes(model.statusById[p.id]?.status)
+  );
+}
+
+// Overall rating: '' = none, otherwise 1–99 (NaN when invalid)
+const parseOvr = (v) => {
+  const t = String(v ?? '').trim();
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isInteger(n) && n >= 1 && n <= 99 ? n : NaN;
+};
+const digits = (v, n) => String(v).replace(/[^0-9]/g, '').slice(0, n);
+
+// "S2 · Denmark — @nordicfox, ep. 22"
+export const scoutingLabel = (sc) =>
+  `S${sc.season.number} · ${sc.country}${sc.suggested_by || sc.episode ? ' — ' : ''}${[sc.suggested_by, sc.episode ? `ep. ${sc.episode}` : null].filter(Boolean).join(', ')}`;
+
+function ScoutingSelect({ model, value, onChange }) {
+  if (!model.scouting.length) return null;
+  return (
+    <label>
+      Found when scouting
+      <select value={value || ''} onChange={(e) => onChange(e.target.value)}>
+        <option value="">—</option>
+        {[...model.scouting].reverse().map((sc) => <option key={sc.id} value={sc.id}>{scoutingLabel(sc)}</option>)}
+      </select>
+    </label>
   );
 }
 
@@ -110,7 +136,7 @@ export default function PlayersAdmin({ data, api, onChanged, edition = null }) {
 function QuickAdd({ api, onChanged, model, edition }) {
   const seasons = model.seasons;
   const latest = seasons[seasons.length - 1];
-  const blank = { name: '', kit: '', position: 'ST', country: '', joined_season_id: latest?.id || '' };
+  const blank = { name: '', kit: '', position: 'ST', country: '', joined_season_id: latest?.id || '', scouting_id: '', ovr: '' };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -121,20 +147,25 @@ function QuickAdd({ api, onChanged, model, edition }) {
     e.preventDefault();
     if (!f.name.trim()) return;
     if (Number.isNaN(parseKit(f.kit))) return setError('Kit numbers go from 1 to 99 (or leave it empty).');
+    if (Number.isNaN(parseOvr(f.ovr))) return setError('An overall rating goes from 1 to 99 (or leave it empty).');
     setBusy(true);
     setError('');
     try {
-      await api.save('players', {
+      const created = await api.save('players', {
         name: capitalizeName(f.name.trim()),
         ...(parseKit(f.kit) != null ? { kit_number: parseKit(f.kit) } : {}),
         position: f.position || null,
         country: capitalizeName(f.country.trim()) || null,
         joined_season_id: f.joined_season_id || null,
+        ...(f.scouting_id ? { scouting_id: f.scouting_id } : {}),
         ...(edition ? { edition_id: edition.id } : {}),
       });
+      // overall when signed (migration 011)
+      if (parseOvr(f.ovr) != null && created?.id)
+        await api.save('player_overalls', { player_id: created.id, season_id: f.joined_season_id || null, moment: 'signed', ovr: parseOvr(f.ovr) });
       await onChanged();
       setMsg(`Added ${capitalizeName(f.name.trim())} ✓`);
-      setF((x) => ({ ...blank, position: x.position, joined_season_id: x.joined_season_id }));
+      setF((x) => ({ ...blank, position: x.position, joined_season_id: x.joined_season_id, scouting_id: x.scouting_id }));
       nameRef.current?.focus();
     } catch (err) {
       setError(err.message);
@@ -164,6 +195,11 @@ function QuickAdd({ api, onChanged, model, edition }) {
           <datalist id="dl-countries">{COUNTRIES.map((c) => <option key={c} value={c} />)}</datalist>
         </label>
         <JoinedSelect seasons={seasons} value={f.joined_season_id} onChange={(v) => setF({ ...f, joined_season_id: v })} />
+        <ScoutingSelect model={model} value={f.scouting_id} onChange={(v) => setF({ ...f, scouting_id: v })} />
+        <label>
+          Overall when signed
+          <input value={f.ovr} onChange={(e) => setF({ ...f, ovr: digits(e.target.value, 2) })} placeholder="e.g. 58" inputMode="numeric" />
+        </label>
         <label style={{ alignSelf: 'end' }}>
           <button className="btn" disabled={busy}>{busy ? 'Adding…' : 'Add player'}</button>
         </label>
@@ -184,6 +220,7 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
     position: player.position || '',
     country: player.country || '',
     joined_season_id: player.joined_season_id || '',
+    scouting_id: player.scouting_id || '',
   });
   const [action, setAction] = useState(null); // 'sold' | 'loan' | 'loan_return' | 'released'
   const [busy, setBusy] = useState(false);
@@ -210,6 +247,8 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
         position: f.position || null,
         country: capitalizeName(f.country.trim()) || null,
         joined_season_id: f.joined_season_id || null,
+        // scouting trip (migration 011) — only sent when set or previously set
+        ...(f.scouting_id || player.scouting_id ? { scouting_id: f.scouting_id || null } : {}),
       });
       await onChanged();
       setMsg('Details saved ✓');
@@ -283,12 +322,15 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
             <datalist id="dl-countries2">{COUNTRIES.map((c) => <option key={c} value={c} />)}</datalist>
           </label>
           <JoinedSelect seasons={model.seasons} value={f.joined_season_id} onChange={(v) => setF({ ...f, joined_season_id: v })} />
+          <ScoutingSelect model={model} value={f.scouting_id} onChange={(v) => setF({ ...f, scouting_id: v })} />
         </div>
         <div className="row" style={{ marginTop: 12 }}>
           <button className="btn" disabled={busy}>Save details</button>
           {msg && <span style={{ color: 'var(--win)', fontSize: 14 }}>{msg}</span>}
         </div>
       </form>
+
+      <OverallsCard model={model} player={player} api={api} onChanged={onChanged} />
 
       <div className="card" style={{ marginTop: 16 }}>
         <h3 style={{ marginBottom: 12 }}>Transfers &amp; loans</h3>
@@ -332,7 +374,7 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
                 <tr key={mv.id}>
                   <td>{mv.season ? seasonLabel(mv.season) : '—'}</td>
                   <td className="muted">{mv.moved_on || '—'}</td>
-                  <td style={{ fontWeight: 600 }}>{MOVE_LABEL[mv.type]}</td>
+                  <td style={{ fontWeight: 600 }}>{MOVE_LABEL[mv.type]}{mv.loan_length ? <span className="muted" style={{ fontWeight: 400 }}> · {loanLengthLabel(mv.loan_length)}</span> : null}</td>
                   <td>{mv.club || '—'}</td>
                   <td className="num">{moveFee(mv) != null ? formatMoney(moveFee(mv), model.currency) : '—'}</td>
                   <td className="muted" style={{ whiteSpace: 'normal' }}>{mv.notes || ''}</td>
@@ -368,6 +410,7 @@ function MoveForm({ type, model, player, lastLoanClub, api, onDone, onCancel }) 
     moved_on: '',
     club: type === 'loan_return' ? lastLoanClub || '' : '',
     fee: '',
+    loan_length: '',
     notes: '',
   });
   const [busy, setBusy] = useState(false);
@@ -389,6 +432,7 @@ function MoveForm({ type, model, player, lastLoanClub, api, onDone, onCancel }) 
         fee: fee ?? null,
         season_id: f.season_id || null,
         moved_on: f.moved_on || null,
+        ...(type === 'loan' && f.loan_length ? { loan_length: f.loan_length } : {}),
         notes: f.notes.trim() || null,
       });
       await onDone(`${copy.title}: saved ✓`);
@@ -420,12 +464,134 @@ function MoveForm({ type, model, player, lastLoanClub, api, onDone, onCancel }) 
             </span>
           </label>
         )}
+        {type === 'loan' && (
+          <label>
+            Loan length
+            <select value={f.loan_length} onChange={(e) => setF({ ...f, loan_length: e.target.value })}>
+              <option value="">—</option>
+              {LOAN_LENGTHS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+            </select>
+          </label>
+        )}
         <label className="wide">Notes<input value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="e.g. release clause, loan until end of season…" /></label>
       </div>
       {error && <div className="error" style={{ marginTop: 12 }}>{error}</div>}
       <div className="row" style={{ marginTop: 12 }}>
         <button className="btn" disabled={busy}>{busy ? 'Saving…' : copy.button}</button>
         <button type="button" className="btn secondary" onClick={onCancel}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+// Overall rating over time: when signed, start / during / end of every season
+function OverallsCard({ model, player, api, onChanged }) {
+  const history = model.overallsByPlayer[player.id] || [];
+  const latest = model.seasons[model.seasons.length - 1];
+  const blank = { id: null, season_id: latest?.id || '', moment: history.length ? 'during' : 'signed', episode: '', ovr: '' };
+  const [f, setF] = useState(blank);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [msg, setMsg] = useState('');
+
+  async function submit(e) {
+    e.preventDefault();
+    const ovr = parseOvr(f.ovr);
+    if (ovr == null || Number.isNaN(ovr)) return setError('Enter an overall from 1 to 99.');
+    setBusy(true);
+    setError('');
+    try {
+      await api.save('player_overalls', {
+        ...(f.id ? { id: f.id } : { player_id: player.id }),
+        season_id: f.season_id || null,
+        moment: f.moment,
+        episode: f.episode ? Number(f.episode) : null,
+        ovr,
+      });
+      await onChanged();
+      setMsg(f.id ? 'Overall updated ✓' : `Overall ${ovr} added ✓`);
+      setF({ ...blank, season_id: f.season_id, moment: f.moment === 'signed' || f.moment === 'start' ? 'during' : f.moment });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(o) {
+    if (!window.confirm(`Remove overall ${o.ovr} (${o.season ? seasonLabel(o.season) : 'no season'}, ${momentLabel(o.moment)})?`)) return;
+    try {
+      await api.remove('player_overalls', o.id);
+      await onChanged();
+      if (f.id === o.id) setF(blank);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  const edit = (o) => {
+    setMsg('');
+    setF({ id: o.id, season_id: o.season_id || '', moment: o.moment, episode: o.episode != null ? String(o.episode) : '', ovr: String(o.ovr) });
+  };
+
+  return (
+    <form className="card" style={{ marginTop: 16 }} onSubmit={submit}>
+      <div className="row" style={{ marginBottom: 12 }}>
+        <h3>Overall rating</h3>
+        {msg && <span style={{ color: 'var(--win)', fontSize: 14 }}>{msg}</span>}
+      </div>
+      <div className="form-grid">
+        <label>
+          Season
+          <select value={f.season_id} onChange={(e) => setF({ ...f, season_id: e.target.value })}>
+            <option value="">—</option>
+            {[...model.seasons].reverse().map((s) => <option key={s.id} value={s.id}>{seasonLabel(s)}</option>)}
+          </select>
+        </label>
+        <label>
+          When
+          <select value={f.moment} onChange={(e) => setF({ ...f, moment: e.target.value })}>
+            {OVR_MOMENTS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        </label>
+        <label>
+          Episode (optional)
+          <input value={f.episode} onChange={(e) => setF({ ...f, episode: digits(e.target.value, 4) })} placeholder="e.g. 18" inputMode="numeric" />
+        </label>
+        <label>
+          Overall *
+          <input value={f.ovr} onChange={(e) => setF({ ...f, ovr: digits(e.target.value, 2) })} placeholder="e.g. 64" inputMode="numeric" />
+        </label>
+        <div className="row" style={{ gap: 8, alignSelf: 'end' }}>
+          <button className="btn" disabled={busy}>{f.id ? 'Save overall' : 'Add overall'}</button>
+          {f.id && <button type="button" className="btn secondary" onClick={() => setF(blank)}>Cancel</button>}
+        </div>
+      </div>
+      {error && <div className="error" style={{ marginTop: 12 }}>{error}</div>}
+      <div className="table-wrap" style={{ marginTop: 16 }}>
+        <table>
+          <thead><tr><th>Season</th><th>When</th><th className="num">Episode</th><th className="num">Overall</th><th className="num">+/−</th><th></th></tr></thead>
+          <tbody>
+            {history.length === 0 && <tr><td colSpan={6} className="muted">No overall ratings yet.</td></tr>}
+            {[...history].reverse().map((o, i, arr) => {
+              const prev = arr[i + 1];
+              const d = prev ? o.ovr - prev.ovr : null;
+              return (
+                <tr key={o.id} className={f.id === o.id ? 'editing' : ''}>
+                  <td>{o.season ? seasonLabel(o.season) : '—'}</td>
+                  <td>{momentLabel(o.moment)}</td>
+                  <td className="num muted">{o.episode ?? '—'}</td>
+                  <td className="num" style={{ fontWeight: 700 }}>{o.ovr}</td>
+                  <td className="num" style={{ color: d > 0 ? 'var(--win)' : d < 0 ? 'var(--loss)' : 'var(--muted)' }}>{d == null ? '' : d > 0 ? `+${d}` : d}</td>
+                  <td className="num" style={{ whiteSpace: 'nowrap' }}>
+                    <button type="button" className="btn secondary small" onClick={() => edit(o)}>Edit</button>{' '}
+                    <button type="button" className="btn danger small" onClick={() => remove(o)} aria-label="Remove">✕</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </form>
   );

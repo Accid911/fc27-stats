@@ -3,12 +3,15 @@ import Fixture from './Fixture';
 // Matches with result, scorers and POTM. `matches` come from buildModel (have lineup + result).
 export default function MatchTable({ matches, playerById, clubName, showSeason = false, base = '' }) {
   if (!matches.length) return <p className="muted" style={{ padding: 20, margin: 0 }}>No matches logged yet.</p>;
+  // episode column only once episodes are being entered
+  const showEp = matches.some((m) => m.episode != null);
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
             {showSeason && <th>Season</th>}
+            {showEp && <th>Ep.</th>}
             <th>Tournament</th>
             <th>Match</th>
             <th></th>
@@ -26,6 +29,7 @@ export default function MatchTable({ matches, playerById, clubName, showSeason =
             return (
               <tr key={m.id}>
                 {showSeason && <td className="muted">S{m.season.number}</td>}
+                {showEp && <td className="muted">{m.episode ?? ''}</td>}
                 <td className="muted">{m.tournament || '—'}</td>
                 <td><Fixture m={m} clubName={clubName} href={`${base}/matches/${m.id}`} /></td>
                 <td><span className={`result ${m.result}`}>{m.result}</span></td>
@@ -33,7 +37,7 @@ export default function MatchTable({ matches, playerById, clubName, showSeason =
                 <td>{potm ? <span className="badge gold">★ {playerById[potm.player_id]?.name}</span> : <span className="muted">—</span>}</td>
                 <td>
                   {m.video_url && (
-                    <a className="watch" href={m.video_url} target="_blank" rel="noreferrer" title="Watch this episode on YouTube">▶</a>
+                    <a className="watch" href={m.video_url} target="_blank" rel="noreferrer" title={m.episode ? `Watch episode ${m.episode} on YouTube` : 'Watch this episode on YouTube'}>▶</a>
                   )}
                 </td>
               </tr>

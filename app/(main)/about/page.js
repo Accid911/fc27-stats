@@ -46,7 +46,8 @@ export default async function AboutPage() {
         <li><b>One club:</b> the whole career is played with {club}.</li>
         <li><b>Academy players only:</b> the squad is built from youth academy players, who grow up together over the seasons.</li>
         <li><b>Kit numbers by the viewers:</b> every episode a viewer gets to pick the shirt number of one player. The player page shows the number and who picked it.</li>
-        <li><b>Players move on:</b> when a youngster is sold, loaned out or released, you’ll find it under <Link href="/players#transfers">Transfers &amp; loans</Link> on the Players page, with the club (and the fee for a sale).</li>
+        <li><b>Scouting by the viewers:</b> every few in-game months the viewers choose which country to scout. Each season page lists the countries, who suggested them and which players were found there.</li>
+        <li><b>Players move on:</b> when a youngster is sold, loaned out or released, you’ll find it under <Link href="/players#transfers">Transfers &amp; loans</Link> on the Players page, with the club (and the fee for a sale, or the length of a loan).</li>
       </ul>
 
       <h2>How the stats work</h2>
@@ -58,6 +59,8 @@ export default async function AboutPage() {
         <li>League tables are copied from the game at the end of each season (or during it).</li>
         <li><b>Trophies</b> are automatic: a cup marked “Winner”, finishing top of the league or winning the promotion <b>play-offs</b> puts it in the trophy cabinet.</li>
         <li>Every player shows the season he <b>joined the first team</b>, so you can follow each academy intake.</li>
+        <li>A player’s <b>overall rating</b> is noted when he signs and at the start, during and end of every season, so the player page shows how he grew.</li>
+        <li>Newer matches show the <b>episode</b> they were played in and who <b>started</b> or <b>came on as a substitute</b> (with the minute when known).</li>
         <li>Away matches are shown with the home team first, like on a real fixture list.</li>
       </ul>
 
@@ -116,7 +119,7 @@ export default async function AboutPage() {
       <p>
         <b>Privacy:</b> you don’t need an account to use this site and it doesn’t ask for or store any personal data
         from visitors. Visitor numbers are counted with Vercel Web Analytics, which doesn’t use cookies. The only
-        names shown are player names and the viewer names that picked a kit number on the channel.
+        names shown are player names and the viewer names that picked a kit number or suggested a scouting trip on the channel.
       </p>
     </div>
   );

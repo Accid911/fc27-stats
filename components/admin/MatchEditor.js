@@ -53,18 +53,19 @@ export default function MatchEditor({ data, seasonId, api, onChanged }) {
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Tournament</th><th>Match</th><th></th><th className="num">Players</th><th>POTM</th><th></th>
+                <th>#</th><th>Ep.</th><th>Tournament</th><th>Match</th><th></th><th className="num">Players</th><th>POTM</th><th></th>
               </tr>
             </thead>
             <tbody>
               {matches.length === 0 && (
-                <tr><td colSpan={7} className="muted">No matches in this season yet — click “New match”.</td></tr>
+                <tr><td colSpan={8} className="muted">No matches in this season yet — click “New match”.</td></tr>
               )}
               {matches.map((m, i) => {
                 const potm = m.lineup.find((r) => r.potm);
                 return (
                   <tr key={m.id}>
                     <td className="muted">{matches.length - i}</td>
+                    <td className="muted">{m.episode ?? '—'}</td>
                     <td>{m.tournament || '—'}</td>
                     <td><Fixture m={m} clubName={model.clubName} /></td>
                     <td><span className={`result ${m.result}`}>{m.result}</span></td>
@@ -102,6 +103,8 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
     played_on: initial.played_on ?? '',
     video_url: initial.video_url ?? '',
     notes: initial.notes ?? '',
+    // new match: same episode as the last one entered (an episode often has a few matches)
+    episode: initial.id ? initial.episode ?? '' : model.matches[model.matches.length - 1]?.episode ?? '',
   });
   const [rows, setRows] = useState(() =>
     sortRows(
@@ -110,6 +113,9 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
         rating: r.rating ?? '',
         goals: r.goals,
         assists: r.assists,
+        role: r.started === true ? 'start' : r.started === false ? 'sub' : '',
+        sub_for: r.sub_for || '',
+        minute_on: r.minute_on ?? '',
       })),
       model
     )
@@ -152,18 +158,32 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
     return list[list.length - 1] || null;
   }, [model, initial.id]);
 
+  // the first 11 players added start, the rest come off the bench (change it per player)
+  const newRow = (id, list) => ({
+    player_id: id, rating: '', goals: 0, assists: 0, sub_for: '', minute_on: '',
+    role: list.filter((x) => x.role === 'start').length < 11 ? 'start' : 'sub',
+  });
   function addPlayer(id) {
-    setRows((r) => sortRows([...r, { player_id: id, rating: '', goals: 0, assists: 0 }], model));
+    setRows((r) => sortRows([...r, newRow(id, r)], model));
   }
   function copyPrevious() {
-    const ids = previous.lineup.map((r) => r.player_id).filter((id) => !picked.has(id));
-    setRows((r) => sortRows([...r, ...ids.map((id) => ({ player_id: id, rating: '', goals: 0, assists: 0 }))], model));
+    // same starters / subs as last match where known
+    const prev = previous.lineup.filter((x) => !picked.has(x.player_id));
+    setRows((r) => {
+      const out = [...r];
+      for (const x of prev) {
+        const row = newRow(x.player_id, out);
+        if (x.started === false) row.role = 'sub';
+        out.push(row);
+      }
+      return sortRows(out, model);
+    });
   }
   function update(id, key, value) {
     setRows((r) => r.map((row) => (row.player_id === id ? { ...row, [key]: value } : row)));
   }
   function removeRow(id) {
-    setRows((r) => r.filter((row) => row.player_id !== id));
+    setRows((r) => r.filter((row) => row.player_id !== id).map((row) => (row.sub_for === id ? { ...row, sub_for: '' } : row)));
     if (potm === id) setPotm('');
   }
 
@@ -184,6 +204,12 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
     else if (Number(m.pens_for) === Number(m.pens_against)) problems.push('A penalty shoot-out can’t end level.');
   }
   const ownGoals = gf - totalGoals;
+  const starters = rows.filter((r) => r.role === 'start');
+  const subs = rows.filter((r) => r.role === 'sub');
+  if (starters.length > 11) problems.push(`${starters.length} players are marked as starting — the starting XI is 11.`);
+  const replaced = subs.map((r) => r.sub_for).filter(Boolean);
+  if (new Set(replaced).size < replaced.length) problems.push('Someone is substituted off twice.');
+  if (rows.some((r) => r.minute_on !== '' && (Number(r.minute_on) < 1 || Number(r.minute_on) > 130))) problems.push('Minutes go from 1 to 130.');
 
   async function save(e) {
     e.preventDefault();
@@ -201,6 +227,7 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
           goals_against: ga,
           pens_for: pensGiven ? Number(m.pens_for) : null,
           pens_against: pensGiven ? Number(m.pens_against) : null,
+          episode: m.episode === '' || m.episode == null ? null : Number(m.episode),
         },
         rows.map((r) => ({
           player_id: r.player_id,
@@ -208,6 +235,10 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
           goals: Number(r.goals) || 0,
           assists: Number(r.assists) || 0,
           potm: r.player_id === potm,
+          // substitutions (migration 011); empty = not entered
+          started: r.role === 'start' ? true : r.role === 'sub' ? false : null,
+          sub_for: r.role === 'sub' && r.sub_for ? r.sub_for : null,
+          minute_on: r.role === 'sub' && r.minute_on !== '' ? Number(r.minute_on) : null,
         }))
       );
       const saved = {
@@ -260,6 +291,10 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
               <option value="A">Away</option>
               <option value="N">Neutral</option>
             </select>
+          </label>
+          <label>
+            Episode
+            <input value={m.episode} onChange={(e) => set('episode', e.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="e.g. 14" inputMode="numeric" />
           </label>
         </div>
 
@@ -337,6 +372,7 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
                   <th className="center">Goals</th>
                   <th className="center">Assists</th>
                   <th className="center">POTM</th>
+                  <th>Started / came on</th>
                   <th></th>
                 </tr>
               </thead>
@@ -374,6 +410,35 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
                           ★
                         </button>
                       </td>
+                      <td>
+                        <span className="sub-cell">
+                          <select value={r.role} onChange={(e) => update(r.player_id, 'role', e.target.value)} aria-label="Started or came on">
+                            <option value="start">Started</option>
+                            <option value="sub">Came on</option>
+                            <option value="">Not entered</option>
+                          </select>
+                          {r.role === 'sub' && (
+                            <>
+                              <select value={r.sub_for} onChange={(e) => update(r.player_id, 'sub_for', e.target.value)} aria-label="Came on for">
+                                <option value="">for —</option>
+                                {rows
+                                  .filter((x) => x.player_id !== r.player_id && x.role !== '')
+                                  .map((x) => (
+                                    <option key={x.player_id} value={x.player_id}>for {model.playerById[x.player_id]?.name}</option>
+                                  ))}
+                              </select>
+                              <input
+                                className="stat-input"
+                                value={r.minute_on}
+                                onChange={(e) => update(r.player_id, 'minute_on', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
+                                placeholder="min"
+                                inputMode="numeric"
+                                aria-label="Minute he came on"
+                              />
+                            </>
+                          )}
+                        </span>
+                      </td>
                       <td className="num">
                         <button type="button" className="btn danger small" onClick={() => removeRow(r.player_id)} aria-label="Remove">✕</button>
                       </td>
@@ -391,6 +456,7 @@ function MatchForm({ model, initial, seasonId, api, onCancel, onSaved }) {
             {ownGoals > 0 && totalGoals > 0 ? ` (${ownGoals} own goal${ownGoals > 1 ? 's' : ''} / unassigned)` : ''}
             {' · '}Assists: <b>{totalAssists}</b>
             {' · '}POTM: <b>{potm ? model.playerById[potm]?.name : 'none'}</b>
+            {(starters.length > 0 || subs.length > 0) && <>{' · '}Started: <b>{starters.length}</b> · Came on: <b>{subs.length}</b></>}
           </p>
         )}
       </div>

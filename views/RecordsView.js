@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook, countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, MOVE_LABEL, fixture, fixtureText, funFacts, allHonours } from '@/lib/data';
+import { buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook, countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, MOVE_LABEL, fixture, fixtureText, funFacts, allHonours, overallImprovers, squadOverallBySeason } from '@/lib/data';
 import Leaderboard from '@/components/Leaderboard';
 import DemoNotice from '@/components/DemoNotice';
 import { BarList, ColumnChart } from '@/components/Charts';
@@ -50,6 +50,12 @@ export default function RecordsView({ data, base = '', edition = null }) {
     label: POSITION_GROUPS[g],
     value: squad.filter((p) => positionGroup(p.position) === g).length,
   }));
+
+  // Overall rating growth, substitutes and scouting (only shown once something is entered)
+  const improvers = overallImprovers(model).map(({ player, sum }) => ({ ...player, growth: sum.growth, from: sum.first.ovr, to: sum.latest.ovr }));
+  const ovrBySeason = squadOverallBySeason(model).map((x) => ({ label: `S${x.season.number}`, value: x.avg, players: x.players }));
+  const subsUsed = stats.some((p) => p.subApps > 0);
+  const scouted = countBy(model.scouting, (sc) => sc.country);
 
   return (
     <>
@@ -164,6 +170,12 @@ export default function RecordsView({ data, base = '', edition = null }) {
             empty={`Needs ${minApps}+ appearances.`}
           />
           <Leaderboard base={base} title="Hat-tricks" rows={topBy(stats, 'hatTricks')} valueKey="hatTricks" sub={(p) => `${p.goals} goals in total`} empty="No hat-tricks yet." />
+          {improvers.length > 0 && (
+            <Leaderboard base={base} title="Biggest overall improvers" rows={improvers} valueKey="growth" format={(v) => `+${v}`} sub={(p) => `${p.from} → ${p.to}`} />
+          )}
+          {subsUsed && (
+            <Leaderboard base={base} title="Super subs (goals off the bench)" rows={topBy(stats, 'subGoals')} valueKey="subGoals" sub={(p) => `${plural(p.subApps, 'sub appearance')}`} empty="No goals off the bench yet." />
+          )}
         </div>
       </section>
 
@@ -182,6 +194,12 @@ export default function RecordsView({ data, base = '', edition = null }) {
             <h3 style={{ marginBottom: 4 }}>League points per season</h3>
             <ColumnChart rows={pointsBySeason} tip={(r) => `${r.label}: ${r.value} pts · finished ${ordinal(r.pos)} in the ${r.league}`} />
           </div>
+          {ovrBySeason.length > 0 && (
+            <div className="card">
+              <h3 style={{ marginBottom: 4 }}>Average squad overall per season</h3>
+              <ColumnChart rows={ovrBySeason} tip={(r) => `${r.label}: ${r.value} average overall (${plural(r.players, 'player')})`} />
+            </div>
+          )}
         </div>
       </section>
 
@@ -207,6 +225,12 @@ export default function RecordsView({ data, base = '', edition = null }) {
             <h3 style={{ marginBottom: 12 }}>Goals by position</h3>
             <BarList rows={fun.goalsByGroup} tip={(r) => `${r.label}: ${plural(r.value, 'goal')}`} />
           </div>
+          {scouted.length > 0 && (
+            <div className="card">
+              <h3 style={{ marginBottom: 12 }}>Countries scouted by the viewers</h3>
+              <BarList rows={scouted.slice(0, 10)} tip={(r) => `${r.label}: scouted ${plural(r.value, 'time')}`} />
+            </div>
+          )}
         </div>
       </section>
     </>

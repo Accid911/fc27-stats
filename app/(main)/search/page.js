@@ -1,5 +1,5 @@
 import { loadAll, loadArchive } from '@/lib/server-data';
-import { buildModel, playerStats, statusText, seasonLabel } from '@/lib/data';
+import { buildModel, playerStats, statusText, seasonLabel, fixtureText } from '@/lib/data';
 import SearchBox from '@/components/SearchBox';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +28,7 @@ async function searchSets() {
 function buildIndex(sets) {
   const players = [];
   const opponents = [];
+  const episodes = [];
   for (const set of sets) {
     const model = buildModel(set.data);
     for (const p of playerStats(model)) {
@@ -40,6 +41,20 @@ function buildIndex(sets) {
         edition: set.label,
         current: set.current,
         href: `${set.base}/players/${p.id}`,
+      });
+    }
+    // matches by episode number ("ep 12")
+    for (const m of model.matches) {
+      if (m.episode == null) continue;
+      episodes.push({
+        key: `${set.base}|${m.id}`,
+        ep: Number(m.episode),
+        name: `Episode ${m.episode}`,
+        sub: fixtureText(m, model.clubName),
+        stats: `${seasonLabel(m.season)} · ${m.tournament || 'Match'}`,
+        edition: set.label,
+        current: set.current,
+        href: `${set.base}/matches/${m.id}`,
       });
     }
     const opp = {};
@@ -62,7 +77,7 @@ function buildIndex(sets) {
       });
     }
   }
-  return { players, opponents };
+  return { players, opponents, episodes };
 }
 
 export default async function Page({ searchParams }) {
@@ -72,7 +87,7 @@ export default async function Page({ searchParams }) {
     <>
       <div className="eyebrow">Find anything</div>
       <h1 style={{ marginBottom: 8 }}>Search</h1>
-      <p className="muted" style={{ marginBottom: 20 }}>Players and opponents from every Youth Edition on this site.</p>
+      <p className="muted" style={{ marginBottom: 20 }}>Players, opponents and episodes from every Youth Edition on this site.</p>
       <SearchBox index={index} initial={String(q).slice(0, 60)} />
     </>
   );

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { formatMoney, seasonLabel, MOVE_LABEL, statusText, moveFee } from '@/lib/data';
+import { formatMoney, seasonLabel, MOVE_LABEL, statusText, moveFee, loanLengthLabel } from '@/lib/data';
 import { Kpi } from '@/components/StatCards';
 import TransfersTable from '@/components/TransfersTable';
 import { positionOrder } from '@/lib/constants';
@@ -26,7 +26,7 @@ export default function TransfersSection({ model, data, base = '' }) {
       playerHref: `${base}/players/${mv.player_id}`,
       pos: mv.player.position || '',
       posOrder: mv.player.position ? positionOrder(mv.player.position) : null,
-      what: MOVE_LABEL[mv.type],
+      what: mv.type === 'loan' && mv.loan_length ? `${MOVE_LABEL[mv.type]} (${loanLengthLabel(mv.loan_length).replace(/ loan$/, '')})` : MOVE_LABEL[mv.type],
       badge: TYPE_BADGE[mv.type],
       club: mv.club || '',
       fee: fee != null ? Number(fee) : null,

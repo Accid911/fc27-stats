@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { buildModel, playerStats, seasonLabel, statusText, formatMoney, moveFee, fixtureText, STATUS_BADGE, MOVE_LABEL } from '@/lib/data';
+import {
+  buildModel, playerStats, seasonLabel, statusText, formatMoney, moveFee, fixtureText, loanLengthLabel, momentLabel, momentShort, overallSummary,
+  STATUS_BADGE, MOVE_LABEL,
+} from '@/lib/data';
+import OverallChart from '@/components/OverallChart';
 import RatingChart from '@/components/RatingChart';
 import SortableTable from '@/components/SortableTable';
 import Fixture from '@/components/Fixture';
@@ -61,7 +65,15 @@ export default function PlayerView({ data, id, base = '', edition = null, fullLo
       href: `${base}/matches/${m.id}`,
     }));
 
+  // Overall rating over time
+  const ovr = overallSummary(model, id);
+  const ovrPoints = (ovr?.history || []).map((o) => ({
+    id: o.id, ovr: o.ovr, season: o.season?.number ?? null, label: momentShort(o.moment), long: momentLabel(o.moment), episode: o.episode,
+  }));
+  const scouted = model.scoutingById[player.scouting_id] || null;
+
   const kpis = [
+    ...(ovr ? [['Overall', ovr.latest.ovr]] : []),
     ['Apps', all.apps],
     ['Goals', all.goals],
     ['Assists', all.assists],
@@ -70,6 +82,9 @@ export default function PlayerView({ data, id, base = '', edition = null, fullLo
     ['Avg rating', all.avg_rating ?? '—'],
     ['Best rating', all.best_rating ?? '—'],
     ['Win %', all.winPct != null ? `${all.winPct}%` : '—'],
+    // only once the starting XI is being entered
+    ...(all.starts + all.subApps > 0 ? [['Started / came on', `${all.starts} / ${all.subApps}`]] : []),
+    ...(all.subGoals > 0 ? [['Goals as a sub', all.subGoals]] : []),
   ];
 
   return (
@@ -94,6 +109,13 @@ export default function PlayerView({ data, id, base = '', edition = null, fullLo
           {player.kit_chosen_episode ? <> in episode {player.kit_chosen_episode}</> : null}
         </p>
       )}
+      {scouted && (
+        <p className="kit-credit">
+          Found when scouting <Link className="link" href={`${base}/seasons/${scouted.season_id}#scouting`}><b>{scouted.country}</b></Link> in {seasonLabel(scouted.season)}
+          {scouted.suggested_by ? <>, suggested by <b>{scouted.suggested_by}</b></> : null}
+          {scouted.episode ? <> (episode {scouted.episode})</> : null}
+        </p>
+      )}
 
       <section className="section grid grid-kpi">
         {kpis.map(([label, value]) => (
@@ -103,6 +125,25 @@ export default function PlayerView({ data, id, base = '', edition = null, fullLo
           </div>
         ))}
       </section>
+
+      {ovr && (
+        <section className="section">
+          <h2>Overall rating</h2>
+          <div className="card">
+            <p className="ovr-summary">
+              <span>{momentLabel(ovr.first.moment)}{ovr.first.season ? ` (S${ovr.first.season.number})` : ''}: <b>{ovr.first.ovr}</b></span>
+              <span>Now: <b>{ovr.latest.ovr}</b></span>
+              {ovr.history.length > 1 && (
+                <span className={ovr.growth > 0 ? 'ovr-up' : ovr.growth < 0 ? 'ovr-down' : ''}>
+                  {ovr.growth > 0 ? `+${ovr.growth}` : ovr.growth} since then
+                </span>
+              )}
+              {ovr.peak > ovr.latest.ovr && <span>Peak: <b>{ovr.peak}</b></span>}
+            </p>
+            <OverallChart points={ovrPoints} />
+          </div>
+        </section>
+      )}
 
       {ratingPoints.length >= 2 && (
         <section className="section">
@@ -147,7 +188,10 @@ export default function PlayerView({ data, id, base = '', edition = null, fullLo
                     <tr key={mv.id}>
                       <td>{mv.season ? seasonLabel(mv.season) : '—'}</td>
                       <td className="muted">{mv.moved_on || '—'}</td>
-                      <td style={{ fontWeight: 600 }}>{MOVE_LABEL[mv.type]}</td>
+                      <td style={{ fontWeight: 600 }}>
+                        {MOVE_LABEL[mv.type]}
+                        {mv.type === 'loan' && mv.loan_length ? <span className="muted" style={{ fontWeight: 400 }}> · {loanLengthLabel(mv.loan_length)}</span> : null}
+                      </td>
                       <td>{mv.club || '—'}</td>
                       <td className="num">{moveFee(mv) != null ? formatMoney(moveFee(mv), model.currency) : '—'}</td>
                       <td className="muted" style={{ whiteSpace: 'normal' }}>{mv.notes || ''}</td>
@@ -190,7 +234,10 @@ export default function PlayerView({ data, id, base = '', edition = null, fullLo
                       <td className="num" style={{ fontWeight: 700 }}>{r.rating != null ? Number(r.rating).toFixed(1) : '—'}</td>
                       <td className="num">{r.goals || ''}</td>
                       <td className="num">{r.assists || ''}</td>
-                      <td>{r.potm ? <span className="badge gold">★</span> : ''}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {r.potm ? <span className="badge gold">★</span> : ''}
+                        {r.started === false && <span className="sub-note on" title="Came on as a sub"> ▲ sub</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

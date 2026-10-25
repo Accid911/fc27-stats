@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabase, demoAllowed } from '@/lib/supabase';
 import { makeApi } from '@/lib/admin-api';
 import { seasonLabel } from '@/lib/data';
-import { CUPS, CURRENCIES, LEAGUES } from '@/lib/constants';
+import { COUNTRIES, CUPS, CURRENCIES, LEAGUES } from '@/lib/constants';
 import CrudSection, { Field } from './CrudSection';
 import MatchEditor from './MatchEditor';
 import SeasonEditor from './SeasonEditor';
@@ -15,7 +15,7 @@ import EditionsAdmin from './EditionsAdmin';
 import { filterByEdition, editionSettings, editionLabel } from '@/lib/editions';
 import { setAdminCookie, clearAdminCookie } from '@/lib/admin-cookie';
 
-const TABS = ['Matches', 'Players', 'Seasons', 'Other trophies', 'Editions', 'Backup', 'Site settings'];
+const TABS = ['Matches', 'Players', 'Seasons', 'Scouting', 'Other trophies', 'Editions', 'Backup', 'Site settings'];
 const EDITION_KEY = 'fc27-admin-edition';
 
 export default function AdminApp() {
@@ -165,7 +165,7 @@ function Dashboard({ api, email, onSignOut }) {
 
   const seasonOptions = seasons.map((s) => ({ value: s.id, label: seasonLabel(s) }));
   const seasonName = (id) => seasonLabel(data.seasons.find((s) => s.id === id));
-  const needsSeason = ['Matches', 'Other trophies'].includes(tab);
+  const needsSeason = ['Matches', 'Scouting', 'Other trophies'].includes(tab);
 
   return (
     <>
@@ -174,11 +174,16 @@ function Dashboard({ api, email, onSignOut }) {
           Demo mode — Supabase isn’t connected, so changes here only last until you refresh. See README to connect.
         </div>
       )}
-      {data.missing?.length > 0 && (
+      {data.missing?.includes('player_moves') ? (
         <div className="notice">
           The database needs an upgrade for transfers &amp; cups — run <code>supabase/migrations/003-transfers-cups.sql</code> in the Supabase SQL Editor.
         </div>
-      )}
+      ) : data.missing?.length > 0 ? (
+        <div className="notice">
+          The database needs an upgrade for scouting, substitutions, loan lengths and overall ratings — run{' '}
+          <code>supabase/migrations/011-scouting-subs-overall.sql</code> in the Supabase SQL Editor.
+        </div>
+      ) : null}
       <div className="row" style={{ marginBottom: 20 }}>
         <div>
           <div className="eyebrow">Admin</div>
@@ -257,6 +262,41 @@ function Dashboard({ api, email, onSignOut }) {
       {tab === 'Players' && <PlayersAdmin key={editionId} data={data} api={api} onChanged={reload} edition={edition} />}
 
       {tab === 'Seasons' && <SeasonEditor key={editionId} data={data} api={api} onChanged={reload} edition={edition} />}
+
+      {tab === 'Scouting' && seasonId && (
+        <p className="muted" style={{ marginTop: -4 }}>
+          Every few in-game months the viewers pick a country to scout. Players found on a trip can be linked to it in the{' '}
+          <button className="linkish" onClick={() => setTab('Players')}>Players</button> tab (“Found when scouting”).
+        </p>
+      )}
+      {tab === 'Scouting' && seasonId && (
+        <CrudSection
+          key={`sc-${seasonId}`}
+          title="Scouting trips"
+          itemName="scouting trip"
+          table="scouting"
+          api={api}
+          onChanged={reload}
+          defaults={{ season_id: seasonId }}
+          rows={(data.scouting || [])
+            .filter((r) => r.season_id === seasonId)
+            .sort((a, b) => (a.episode ?? 1e9) - (b.episode ?? 1e9) || String(a.created_at || '').localeCompare(String(b.created_at || '')))}
+          deleteWarning="Players found on this trip stay, they just lose the link. "
+          fields={[
+            { key: 'season_id', label: 'Season', type: 'select', options: seasonOptions, required: true },
+            { key: 'country', label: 'Country scouted', required: true, suggestions: COUNTRIES },
+            { key: 'suggested_by', label: 'Suggested by', placeholder: 'viewer name, e.g. @username' },
+            { key: 'episode', label: 'Episode', type: 'number', min: 1, max: 9999, placeholder: 'optional' },
+            { key: 'notes', label: 'Notes', placeholder: 'optional', wide: true },
+          ]}
+          columns={[
+            { key: 'country', label: 'Country' },
+            { key: 'suggested_by', label: 'Suggested by' },
+            { key: 'episode', label: 'Episode' },
+            { key: 'found', label: 'Players found', render: (r) => data.players.filter((p) => p.scouting_id === r.id).map((p) => p.name).join(', ') || '—' },
+          ]}
+        />
+      )}
 
       {tab === 'Other trophies' && seasonId && (
         <p className="muted" style={{ marginTop: -4 }}>

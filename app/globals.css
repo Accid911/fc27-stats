@@ -148,6 +148,9 @@ input[type='checkbox'] { width: auto; }
 .tabs button { background: none; border: 0; color: var(--muted); padding: 10px 14px; cursor: pointer; font-weight: 600; font-size: 14px; border-bottom: 2px solid transparent; white-space: nowrap; font-family: inherit; }
 .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
 .stat-input { width: 64px; padding: 5px 6px; text-align: right; }
+.sub-cell { display: flex; gap: 6px; align-items: center; }
+.sub-cell select { width: auto; padding: 5px 6px; font-size: 13px; }
+.sub-cell .stat-input { width: 52px; }
 
 /* Admin: match + season editors */
 .linkish { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
@@ -363,3 +366,20 @@ td .fixture > :nth-child(3) { overflow: hidden; text-overflow: ellipsis; }
 .rating-legend .lg-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--win); box-shadow: 12px 0 0 var(--draw), 24px 0 0 var(--loss); margin-right: 30px; }
 .rating-legend .lg-avg { width: 18px; height: 3px; border-radius: 2px; background: var(--gold); }
 @media (max-width: 600px) { .rating-tip { position: static; transform: none !important; max-width: none; margin-top: 8px; } }
+
+/* Substitutions on the match page */
+tr.group-row td { background: var(--surface-2); color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding-top: 6px; padding-bottom: 6px; }
+.sub-note { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.sub-note.on { color: var(--win); }
+.sub-note.off { color: var(--loss); }
+
+/* Overall rating over time */
+.ovr-chart .line { stroke-opacity: 1; stroke-width: 2.5; }
+.ovr-chart .ovr-area { fill: var(--accent); fill-opacity: .08; stroke: none; }
+.ovr-chart .ovr-dot { fill: var(--accent); }
+.ovr-chart .ovr-val { fill: var(--text); font-size: 12px; font-weight: 700; font-family: var(--font-body); }
+.ovr-active { font-size: 13px; margin-top: 6px; }
+.ovr-summary { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+.ovr-summary b { color: var(--text); }
+.ovr-up { color: var(--win); font-weight: 700; }
+.ovr-down { color: var(--loss); font-weight: 700; }

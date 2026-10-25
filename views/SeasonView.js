@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { buildModel, teamRecord, leagueTable, playerStats, ordinal, seasonLabel, formatMoney, moveFee, MOVE_LABEL, seasonHonours, seasonPlayoff } from '@/lib/data';
+import { buildModel, teamRecord, leagueTable, playerStats, ordinal, seasonLabel, formatMoney, moveFee, MOVE_LABEL, seasonHonours, seasonPlayoff, loanLengthLabel, squadOverallBySeason } from '@/lib/data';
 import SortableTable from '@/components/SortableTable';
 import MatchTable from '@/components/MatchTable';
 import DemoNotice from '@/components/DemoNotice';
@@ -41,6 +41,8 @@ export default function SeasonView({ data, id, base = '', edition = null }) {
   // league, play-offs (only when we were in them or played a play-off match), cups, and anything else logged
   const tournaments = [...new Set([season.tournament, ...(playoff ? [playoff.name] : []), ...(season.cups || []), ...matches.map((m) => m.tournament || '—')])];
   const moves = model.moves.filter((mv) => mv.season_id === id).reverse();
+  const scouting = model.scouting.filter((sc) => sc.season_id === id);
+  const squadOvr = squadOverallBySeason(model).find((x) => x.season.id === id) || null;
 
   return (
     <>
@@ -52,6 +54,7 @@ export default function SeasonView({ data, id, base = '', edition = null }) {
         <span className="badge">P{r.P} · W{r.W} D{r.D} L{r.L}</span>
         <span className="badge">GF {r.GF} · GA {r.GA}</span>
         <span className="badge">{r.CS} clean sheets</span>
+        {squadOvr && <span className="badge" title={`Average of the latest overall of ${squadOvr.players} players`}>Squad overall {squadOvr.avg}</span>}
         {trophies.map((t) => <span key={t.id} className="badge gold">🏆 {t.name}</span>)}
       </div>
       {playoff && (
@@ -178,6 +181,37 @@ export default function SeasonView({ data, id, base = '', edition = null }) {
         </section>
       )}
 
+      {scouting.length > 0 && (
+        <section className="section" id="scouting">
+          <h2>Scouting</h2>
+          <p className="muted" style={{ marginTop: -6 }}>The countries the viewers chose to scout this season.</p>
+          <div className="card pad-0">
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Country</th><th>Suggested by</th><th className="num">Episode</th><th>Players found</th></tr></thead>
+                <tbody>
+                  {scouting.map((sc) => {
+                    const found = data.players.filter((p) => p.scouting_id === sc.id);
+                    return (
+                      <tr key={sc.id}>
+                        <td style={{ fontWeight: 600 }}>{sc.country}</td>
+                        <td>{sc.suggested_by || '—'}</td>
+                        <td className="num muted">{sc.episode ?? '—'}</td>
+                        <td style={{ whiteSpace: 'normal' }}>
+                          {found.length
+                            ? found.map((p, i) => <span key={p.id}>{i ? ', ' : ''}<Link href={`${base}/players/${p.id}`}>{p.name}</Link></span>)
+                            : <span className="muted">{sc.notes || '—'}</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
+
       {moves.length > 0 && (
         <section className="section">
           <h2>Transfers &amp; loans</h2>
@@ -189,7 +223,7 @@ export default function SeasonView({ data, id, base = '', edition = null }) {
                   {moves.map((mv) => (
                     <tr key={mv.id}>
                       <td><Link href={`${base}/players/${mv.player_id}`}>{mv.player.name}</Link></td>
-                      <td>{MOVE_LABEL[mv.type]}</td>
+                      <td>{MOVE_LABEL[mv.type]}{mv.type === 'loan' && mv.loan_length ? <span className="muted"> · {loanLengthLabel(mv.loan_length)}</span> : null}</td>
                       <td>{mv.club || '—'}</td>
                       <td className="num">{moveFee(mv) != null ? formatMoney(moveFee(mv), model.currency) : '—'}</td>
                     </tr>

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { buildModel, seasonLabel, fixture, fixtureText } from '@/lib/data';
+import { buildModel, seasonLabel, fixture, fixtureText, matchSubs } from '@/lib/data';
 import { positionOrder } from '@/lib/constants';
 import DemoNotice from '@/components/DemoNotice';
 
@@ -13,7 +13,7 @@ export function metaFor(data, id) {
     const scorers = m.lineup.filter((r) => r.goals > 0).map((r) => model.playerById[r.player_id]?.name).filter(Boolean);
     const potm = m.lineup.find((r) => r.potm);
     const description = [
-      `${seasonLabel(m.season)} · ${m.tournament || 'Match'}`,
+      `${seasonLabel(m.season)} · ${m.tournament || 'Match'}${m.episode ? ` · Episode ${m.episode}` : ''}`,
       scorers.length ? `Goals: ${scorers.join(', ')}` : null,
       potm ? `Player of the Match: ${model.playerById[potm.player_id]?.name}` : null,
     ].filter(Boolean).join(' · ');
@@ -31,11 +31,17 @@ export default function MatchView({ data, id, base = '', edition = null }) {
   const m = model.matches.find((x) => x.id === id);
   if (!m) notFound();
 
-  const lineup = [...m.lineup].sort((a, b) => {
+  const byPos = (a, b) => {
     const pa = model.playerById[a.player_id];
     const pb = model.playerById[b.player_id];
     return positionOrder(pa.position) - positionOrder(pb.position) || pa.name.localeCompare(pb.name);
-  });
+  };
+  // Starting XI first, then the substitutes in the order they came on (when entered)
+  const subInfo = matchSubs(m);
+  const lineup = subInfo.known ? [...subInfo.starters.sort(byPos), ...subInfo.subs] : [...m.lineup].sort(byPos);
+  const firstSub = subInfo.known ? subInfo.subs[0]?.player_id : null;
+  const name = (id) => model.playerById[id]?.name;
+  const min = (v) => (v != null ? ` ${v}′` : '');
   const f = fixture(m, model.clubName);
   const potm = m.lineup.find((r) => r.potm);
   const rated = m.lineup.filter((r) => r.rating != null);
@@ -48,6 +54,7 @@ export default function MatchView({ data, id, base = '', edition = null }) {
         <Link href={`${base}/seasons/${m.season_id}`}>{seasonLabel(m.season)}</Link> · {m.tournament || 'Match'}
         {m.venue ? ` · ${VENUE[m.venue]}` : ''}
         {m.played_on ? ` · ${m.played_on}` : ''}
+        {m.episode ? ` · Episode ${m.episode}` : ''}
       </div>
 
       <div className="card hero" style={{ textAlign: 'center' }}>
@@ -71,7 +78,7 @@ export default function MatchView({ data, id, base = '', edition = null }) {
         </div>
         {m.video_url && (
           <div style={{ marginTop: 16 }}>
-            <a className="btn" href={m.video_url} target="_blank" rel="noreferrer">▶ Watch this match</a>
+            <a className="btn" href={m.video_url} target="_blank" rel="noreferrer">▶ Watch {m.episode ? `episode ${m.episode}` : 'this match'}</a>
           </div>
         )}
       </div>
@@ -90,18 +97,33 @@ export default function MatchView({ data, id, base = '', edition = null }) {
                   <tr><th>Pos</th><th>Player</th><th className="num">Rating</th><th className="num">Goals</th><th className="num">Assists</th><th></th></tr>
                 </thead>
                 <tbody>
+                  {subInfo.known && (
+                    <tr className="group-row"><td colSpan={6}>Starting XI</td></tr>
+                  )}
                   {lineup.map((r) => {
                     const p = model.playerById[r.player_id];
-                    return (
+                    const off = subInfo.known && r.player_id in subInfo.offMinute;
+                    return [
+                      r.player_id === firstSub && (
+                        <tr key="subs" className="group-row"><td colSpan={6}>Substitutes</td></tr>
+                      ),
                       <tr key={r.player_id} className={r.potm ? 'is-potm' : ''}>
                         <td className="muted">{p.position}</td>
-                        <td><Link href={`${base}/players/${p.id}`}>{p.name}</Link></td>
+                        <td>
+                          <Link href={`${base}/players/${p.id}`}>{p.name}</Link>
+                          {r.started === false && (
+                            <span className="sub-note on" title="Came on">
+                              {' '}▲{min(r.minute_on)}{r.sub_for && name(r.sub_for) ? ` for ${name(r.sub_for)}` : ''}
+                            </span>
+                          )}
+                          {off && <span className="sub-note off" title="Substituted off"> ▼{min(subInfo.offMinute[r.player_id])}</span>}
+                        </td>
                         <td className="num" style={{ fontWeight: 700 }}>{r.rating != null ? Number(r.rating).toFixed(1) : '—'}</td>
                         <td className="num">{r.goals ? '⚽'.repeat(Math.min(r.goals, 5)) + (r.goals > 5 ? ` ${r.goals}` : '') : ''}</td>
                         <td className="num">{r.assists || ''}</td>
                         <td>{r.potm ? <span className="badge gold">★ POTM</span> : ''}</td>
-                      </tr>
-                    );
+                      </tr>,
+                    ];
                   })}
                 </tbody>
               </table>
