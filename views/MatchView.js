@@ -40,7 +40,6 @@ export default function MatchView({ data, id, base = '', edition = null }) {
   const subInfo = matchSubs(m);
   const lineup = subInfo.known ? [...subInfo.starters.sort(byPos), ...subInfo.subs] : [...m.lineup].sort(byPos);
   const firstSub = subInfo.known ? subInfo.subs[0]?.player_id : null;
-  const name = (id) => model.playerById[id]?.name;
   const min = (v) => (v != null ? ` ${v}′` : '');
   const f = fixture(m, model.clubName);
   const potm = m.lineup.find((r) => r.potm);
@@ -97,12 +96,11 @@ export default function MatchView({ data, id, base = '', edition = null }) {
                   <tr><th>Pos</th><th>Player</th><th className="num">Rating</th><th className="num">Goals</th><th className="num">Assists</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {subInfo.known && (
+                  {subInfo.subs.length > 0 && (
                     <tr className="group-row"><td colSpan={6}>Starting XI</td></tr>
                   )}
                   {lineup.map((r) => {
                     const p = model.playerById[r.player_id];
-                    const off = subInfo.known && r.player_id in subInfo.offMinute;
                     return [
                       r.player_id === firstSub && (
                         <tr key="subs" className="group-row"><td colSpan={6}>Substitutes</td></tr>
@@ -111,12 +109,8 @@ export default function MatchView({ data, id, base = '', edition = null }) {
                         <td className="muted">{p.position}</td>
                         <td>
                           <Link href={`${base}/players/${p.id}`}>{p.name}</Link>
-                          {r.started === false && (
-                            <span className="sub-note on" title="Came on">
-                              {' '}▲{min(r.minute_on)}{r.sub_for && name(r.sub_for) ? ` for ${name(r.sub_for)}` : ''}
-                            </span>
-                          )}
-                          {off && <span className="sub-note off" title="Substituted off"> ▼{min(subInfo.offMinute[r.player_id])}</span>}
+                          {r.started === false && <span className="sub-note on" title="Came on"> ▲{min(r.minute_on)}</span>}
+                          {r.came_off === true && <span className="sub-note off" title="Came off"> ▼{min(r.minute_off)}</span>}
                         </td>
                         <td className="num" style={{ fontWeight: 700 }}>{r.rating != null ? Number(r.rating).toFixed(1) : '—'}</td>
                         <td className="num">{r.goals ? '⚽'.repeat(Math.min(r.goals, 5)) + (r.goals > 5 ? ` ${r.goals}` : '') : ''}</td>

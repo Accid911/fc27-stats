@@ -60,7 +60,7 @@ export default async function AboutPage() {
         <li><b>Trophies</b> are automatic: a cup marked “Winner”, finishing top of the league or winning the promotion <b>play-offs</b> puts it in the trophy cabinet.</li>
         <li>Every player shows the season he <b>joined the first team</b>, so you can follow each academy intake.</li>
         <li>A player’s <b>overall rating</b> is noted when he signs and at the start, during and end of every season, so the player page shows how he grew.</li>
-        <li>Newer matches show the <b>episode</b> they were played in and who <b>started</b> or <b>came on as a substitute</b> (with the minute when known).</li>
+        <li>Newer matches show the <b>episode</b> they were played in and who <b>came on</b> or <b>came off</b> as a substitute (with the minute when known).</li>
         <li>Away matches are shown with the home team first, like on a real fixture list.</li>
       </ul>
 

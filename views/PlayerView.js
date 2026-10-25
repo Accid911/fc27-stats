@@ -83,7 +83,7 @@ export default function PlayerView({ data, id, base = '', edition = null, fullLo
     ['Best rating', all.best_rating ?? '—'],
     ['Win %', all.winPct != null ? `${all.winPct}%` : '—'],
     // only once the starting XI is being entered
-    ...(all.starts + all.subApps > 0 ? [['Started / came on', `${all.starts} / ${all.subApps}`]] : []),
+    ...(all.subApps > 0 ? [['Came on as a sub', all.subApps]] : []),
     ...(all.subGoals > 0 ? [['Goals as a sub', all.subGoals]] : []),
   ];
 
@@ -236,7 +236,8 @@ export default function PlayerView({ data, id, base = '', edition = null, fullLo
                       <td className="num">{r.assists || ''}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {r.potm ? <span className="badge gold">★</span> : ''}
-                        {r.started === false && <span className="sub-note on" title="Came on as a sub"> ▲ sub</span>}
+                        {r.started === false && <span className="sub-note on" title="Came on as a sub"> ▲{r.minute_on ? ` ${r.minute_on}′` : ''}</span>}
+                        {r.came_off === true && <span className="sub-note off" title="Came off"> ▼{r.minute_off ? ` ${r.minute_off}′` : ''}</span>}
                       </td>
                     </tr>
                   ))}

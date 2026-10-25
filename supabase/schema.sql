@@ -420,9 +420,11 @@ alter table players add column if not exists scouting_id uuid references scoutin
 alter table matches add column if not exists episode smallint;
 
 -- ── 3. Substitutions (empty for old matches = "unknown") ──
-alter table match_players add column if not exists started boolean;                 -- true = in the starting XI, false = came on
-alter table match_players add column if not exists sub_for uuid references players(id) on delete set null; -- who he replaced
+alter table match_players add column if not exists started boolean;                 -- false = came on as a substitute
+alter table match_players add column if not exists sub_for uuid references players(id) on delete set null; -- not used any more (kept so re-running is safe)
 alter table match_players add column if not exists minute_on smallint;               -- minute he came on (optional)
+alter table match_players add column if not exists came_off boolean;                 -- true = substituted off
+alter table match_players add column if not exists minute_off smallint;              -- minute he came off (optional)
 
 -- ── 4. Loan length ──
 alter table player_moves add column if not exists loan_length text;
@@ -450,6 +452,9 @@ do $$ begin
   end if;
   if not exists (select 1 from pg_constraint where conname = 'match_players_minute_on_check') then
     alter table match_players add constraint match_players_minute_on_check check (minute_on between 1 and 130);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'match_players_minute_off_check') then
+    alter table match_players add constraint match_players_minute_off_check check (minute_off between 1 and 130);
   end if;
   if not exists (select 1 from pg_constraint where conname = 'player_moves_loan_length_check') then
     alter table player_moves add constraint player_moves_loan_length_check check (loan_length in ('short', '1 year', '2 years'));
@@ -516,7 +521,7 @@ begin
     delete from match_players where match_id = v_id;
   end if;
 
-  insert into match_players (match_id, player_id, rating, goals, assists, potm, started, sub_for, minute_on)
+  insert into match_players (match_id, player_id, rating, goals, assists, potm, started, minute_on, came_off, minute_off)
   select v_id,
          (x->>'player_id')::uuid,
          nullif(x->>'rating', '')::numeric,
@@ -524,8 +529,9 @@ begin
          coalesce(nullif(x->>'assists', '')::int, 0),
          coalesce(nullif(x->>'potm', '')::boolean, false),
          nullif(x->>'started', '')::boolean,
-         nullif(x->>'sub_for', '')::uuid,
-         nullif(x->>'minute_on', '')::smallint
+         nullif(x->>'minute_on', '')::smallint,
+         nullif(x->>'came_off', '')::boolean,
+         nullif(x->>'minute_off', '')::smallint
   from jsonb_array_elements(coalesce(p_players, '[]'::jsonb)) x;
 
   return v_id;
@@ -533,3 +539,4 @@ end $$;
 
 revoke execute on function save_match(jsonb, jsonb) from public, anon;
 grant execute on function save_match(jsonb, jsonb) to authenticated;
+
