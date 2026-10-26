@@ -116,6 +116,27 @@ function Dashboard({ api, email, onSignOut }) {
   }
   const edition = editions?.find((e) => e.id === editionId) || null;
 
+  // /admin?player=<id> (the "Edit" link on a player page): open that player in the right edition.
+  const [openPlayerId, setOpenPlayerId] = useState(null);
+  useEffect(() => {
+    if (!allData) return;
+    let id = '';
+    try {
+      id = new URLSearchParams(window.location.search).get('player') || '';
+    } catch {}
+    if (!id) return;
+    const p = allData.players.find((x) => x.id === id);
+    if (p) {
+      if (p.edition_id && editions?.some((e) => e.id === p.edition_id)) chooseEdition(p.edition_id);
+      setOpenPlayerId(id);
+      setTab('Players');
+    }
+    try {
+      window.history.replaceState(null, '', window.location.pathname);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allData]);
+
   // Everything below works on the chosen edition only.
   const data = useMemo(() => {
     if (!allData) return null;
@@ -220,7 +241,7 @@ function Dashboard({ api, email, onSignOut }) {
 
       <div className="tabs">
         {TABS.filter((t) => t !== 'Editions' || editions).map((t) => (
-          <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t}</button>
+          <button key={t} className={tab === t ? 'active' : ''} onClick={() => { setOpenPlayerId(null); setTab(t); }}>{t}</button>
         ))}
       </div>
 
@@ -259,7 +280,7 @@ function Dashboard({ api, email, onSignOut }) {
         )
       )}
 
-      {tab === 'Players' && <PlayersAdmin key={editionId} data={data} api={api} onChanged={reload} edition={edition} />}
+      {tab === 'Players' && <PlayersAdmin key={`${editionId}-${openPlayerId || ''}`} data={data} api={api} onChanged={reload} edition={edition} openPlayerId={openPlayerId} />}
 
       {tab === 'Seasons' && <SeasonEditor key={editionId} data={data} api={api} onChanged={reload} edition={edition} />}
 

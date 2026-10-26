@@ -65,9 +65,9 @@ function KitField({ value, onChange, model, exceptId }) {
   );
 }
 
-export default function PlayersAdmin({ data, api, onChanged, edition = null }) {
+export default function PlayersAdmin({ data, api, onChanged, edition = null, openPlayerId = null }) {
   const model = useMemo(() => buildModel(data), [data]);
-  const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useState(openPlayerId);
   const [filter, setFilter] = useState('all');
 
   const editing = editingId && model.playerById[editingId];
@@ -223,6 +223,7 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
     scouting_id: player.scouting_id || '',
   });
   const [action, setAction] = useState(null); // 'sold' | 'loan' | 'loan_return' | 'released'
+  const [editingMove, setEditingMove] = useState(null); // a move from the history being edited
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -337,7 +338,7 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
         {actions.length > 0 ? (
           <div className="row">
             {actions.map(([type, label]) => (
-              <button key={type} type="button" className={`btn ${action === type ? '' : 'secondary'} small`} onClick={() => setAction(action === type ? null : type)}>
+              <button key={type} type="button" className={`btn ${action === type ? '' : 'secondary'} small`} onClick={() => { setEditingMove(null); setAction(action === type ? null : type); }}>
                 {label}
               </button>
             ))}
@@ -365,20 +366,40 @@ function PlayerPanel({ model, player, api, onChanged, onClose }) {
           />
         )}
 
+        {editingMove && (
+          <MoveForm
+            key={`edit-${editingMove.id}`}
+            type={editingMove.type}
+            initial={editingMove}
+            model={model}
+            player={player}
+            api={api}
+            onDone={async (text) => {
+              await onChanged();
+              setEditingMove(null);
+              setMsg(text);
+            }}
+            onCancel={() => setEditingMove(null)}
+          />
+        )}
+
         <div className="table-wrap" style={{ marginTop: 16 }}>
           <table>
             <thead><tr><th>Season</th><th>Date</th><th>What</th><th>Club</th><th className="num">Fee</th><th>Notes</th><th></th></tr></thead>
             <tbody>
               {moves.length === 0 && <tr><td colSpan={7} className="muted">No transfers or loans yet — academy player since day one.</td></tr>}
               {[...moves].reverse().map((mv) => (
-                <tr key={mv.id}>
+                <tr key={mv.id} style={editingMove?.id === mv.id ? { background: 'var(--surface-2)' } : undefined}>
                   <td>{mv.season ? seasonLabel(mv.season) : '—'}</td>
                   <td className="muted">{mv.moved_on || '—'}</td>
                   <td style={{ fontWeight: 600 }}>{MOVE_LABEL[mv.type]}{mv.loan_length ? <span className="muted" style={{ fontWeight: 400 }}> · {loanLengthLabel(mv.loan_length)}</span> : null}</td>
                   <td>{mv.club || '—'}</td>
                   <td className="num">{moveFee(mv) != null ? formatMoney(moveFee(mv), model.currency) : '—'}</td>
                   <td className="muted" style={{ whiteSpace: 'normal' }}>{mv.notes || ''}</td>
-                  <td className="num"><button className="btn danger small" onClick={() => removeMove(mv)} aria-label="Remove">✕</button></td>
+                  <td className="num" style={{ whiteSpace: 'nowrap' }}>
+                    <button className="btn secondary small" onClick={() => { setAction(null); setMsg(''); setEditingMove(mv); }}>Edit</button>{' '}
+                    <button className="btn danger small" onClick={() => removeMove(mv)} aria-label="Remove">✕</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -402,17 +423,31 @@ const MOVE_COPY = {
   released: { title: 'Release player', club: 'Joined (optional)', fee: null, button: 'Confirm release' },
 };
 
-function MoveForm({ type, model, player, lastLoanClub, api, onDone, onCancel }) {
+// New move (type from the button) or, with `initial`, editing a move from the history.
+function MoveForm({ type: type0, initial = null, model, player, lastLoanClub, api, onDone, onCancel }) {
+  const editing = !!initial;
+  const [type, setType] = useState(type0);
   const copy = MOVE_COPY[type];
   const latest = model.seasons[model.seasons.length - 1];
-  const [f, setF] = useState({
-    season_id: latest?.id || '',
-    moved_on: '',
-    club: type === 'loan_return' ? lastLoanClub || '' : '',
-    fee: '',
-    loan_length: '',
-    notes: '',
-  });
+  const [f, setF] = useState(
+    editing
+      ? {
+          season_id: initial.season_id || '',
+          moved_on: initial.moved_on || '',
+          club: initial.club || '',
+          fee: initial.fee != null && initial.fee !== '' ? String(Number(initial.fee)) : '',
+          loan_length: initial.loan_length || '',
+          notes: initial.notes || '',
+        }
+      : {
+          season_id: latest?.id || '',
+          moved_on: '',
+          club: type0 === 'loan_return' ? lastLoanClub || '' : '',
+          fee: '',
+          loan_length: '',
+          notes: '',
+        }
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const fee = copy.fee ? parseMoney(f.fee) : null;
@@ -425,17 +460,19 @@ function MoveForm({ type, model, player, lastLoanClub, api, onDone, onCancel }) 
     setBusy(true);
     setError('');
     try {
+      const loanLength = type === 'loan' ? f.loan_length || null : null;
       await api.save('player_moves', {
-        player_id: player.id,
+        ...(editing ? { id: initial.id } : { player_id: player.id }),
         type,
         club: f.club.trim() || null,
         fee: fee ?? null,
         season_id: f.season_id || null,
         moved_on: f.moved_on || null,
-        ...(type === 'loan' && f.loan_length ? { loan_length: f.loan_length } : {}),
+        // loan length (migration 011): only sent when set, or to clear an old value
+        ...(loanLength || initial?.loan_length ? { loan_length: loanLength } : {}),
         notes: f.notes.trim() || null,
       });
-      await onDone(`${copy.title}: saved ✓`);
+      await onDone(editing ? `${MOVE_LABEL[type]}: changes saved ✓` : `${copy.title}: saved ✓`);
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -444,8 +481,16 @@ function MoveForm({ type, model, player, lastLoanClub, api, onDone, onCancel }) 
 
   return (
     <form onSubmit={submit} className="move-form">
-      <h3 style={{ marginBottom: 12 }}>{copy.title}: {player.name}</h3>
+      <h3 style={{ marginBottom: 12 }}>{editing ? `Edit ${MOVE_LABEL[type].toLowerCase()}` : copy.title}: {player.name}</h3>
       <div className="form-grid">
+        {editing && (
+          <label>
+            What
+            <select value={type} onChange={(e) => setType(e.target.value)}>
+              {Object.keys(MOVE_COPY).map((t) => <option key={t} value={t}>{MOVE_LABEL[t]}</option>)}
+            </select>
+          </label>
+        )}
         <label>
           Season
           <select value={f.season_id} onChange={(e) => setF({ ...f, season_id: e.target.value })}>
@@ -477,7 +522,7 @@ function MoveForm({ type, model, player, lastLoanClub, api, onDone, onCancel }) 
       </div>
       {error && <div className="error" style={{ marginTop: 12 }}>{error}</div>}
       <div className="row" style={{ marginTop: 12 }}>
-        <button className="btn" disabled={busy}>{busy ? 'Saving…' : copy.button}</button>
+        <button className="btn" disabled={busy}>{busy ? 'Saving…' : editing ? 'Save changes' : copy.button}</button>
         <button type="button" className="btn secondary" onClick={onCancel}>Cancel</button>
       </div>
     </form>

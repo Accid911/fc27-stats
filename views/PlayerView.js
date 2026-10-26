@@ -5,6 +5,7 @@ import {
   STATUS_BADGE, MOVE_LABEL,
 } from '@/lib/data';
 import OverallChart from '@/components/OverallChart';
+import AdminEditLink from '@/components/AdminEditLink';
 import RatingChart from '@/components/RatingChart';
 import SortableTable from '@/components/SortableTable';
 import Fixture from '@/components/Fixture';
@@ -102,6 +103,7 @@ export default function PlayerView({ data, id, base = '', edition = null, fullLo
       <div className="row" style={{ marginTop: 12 }}>
         <span className={`badge ${STATUS_BADGE[st.status]}`}>{statusText(st)}</span>
         {all.hatTricks > 0 && <span className="badge gold">{all.hatTricks} hat-trick{all.hatTricks > 1 ? 's' : ''}</span>}
+        <AdminEditLink href={`/admin?player=${encodeURIComponent(id)}`} label="✎ Edit player, transfers & loans" />
       </div>
       {player.kit_number != null && player.kit_chosen_by && (
         <p className="kit-credit">
