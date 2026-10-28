@@ -136,7 +136,7 @@ export default function PlayersAdmin({ data, api, onChanged, edition = null, ope
 function QuickAdd({ api, onChanged, model, edition }) {
   const seasons = model.seasons;
   const latest = seasons[seasons.length - 1];
-  const blank = { name: '', kit: '', position: 'ST', country: '', joined_season_id: latest?.id || '', scouting_id: '', ovr: '' };
+  const blank = { name: '', kit: '', position: 'ST', country: '', joined_season_id: latest?.id || '', scouting_id: '', ovr: '', ep: '' };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -148,6 +148,7 @@ function QuickAdd({ api, onChanged, model, edition }) {
     if (!f.name.trim()) return;
     if (Number.isNaN(parseKit(f.kit))) return setError('Kit numbers go from 1 to 99 (or leave it empty).');
     if (Number.isNaN(parseOvr(f.ovr))) return setError('An overall rating goes from 1 to 99 (or leave it empty).');
+    if (f.ep && parseOvr(f.ovr) == null) return setError('Fill in his overall too — the episode is saved together with the overall when signed.');
     setBusy(true);
     setError('');
     try {
@@ -162,7 +163,13 @@ function QuickAdd({ api, onChanged, model, edition }) {
       });
       // overall when signed (migration 011)
       if (parseOvr(f.ovr) != null && created?.id)
-        await api.save('player_overalls', { player_id: created.id, season_id: f.joined_season_id || null, moment: 'signed', ovr: parseOvr(f.ovr) });
+        await api.save('player_overalls', {
+          player_id: created.id,
+          season_id: f.joined_season_id || null,
+          moment: 'signed',
+          episode: f.ep ? Number(f.ep) : null,
+          ovr: parseOvr(f.ovr),
+        });
       await onChanged();
       setMsg(`Added ${capitalizeName(f.name.trim())} ✓`);
       setF((x) => ({ ...blank, position: x.position, joined_season_id: x.joined_season_id, scouting_id: x.scouting_id }));
@@ -197,13 +204,20 @@ function QuickAdd({ api, onChanged, model, edition }) {
         <JoinedSelect seasons={seasons} value={f.joined_season_id} onChange={(v) => setF({ ...f, joined_season_id: v })} />
         <ScoutingSelect model={model} value={f.scouting_id} onChange={(v) => setF({ ...f, scouting_id: v })} />
         <label>
-          Overall when signed
-          <input value={f.ovr} onChange={(e) => setF({ ...f, ovr: digits(e.target.value, 2) })} placeholder="e.g. 58" inputMode="numeric" />
+          Overall when signed (1–99)
+          <input value={f.ovr} onChange={(e) => setF({ ...f, ovr: digits(e.target.value, 2) })} placeholder="overall, e.g. 58" inputMode="numeric" />
+        </label>
+        <label>
+          Signed in episode
+          <input value={f.ep} onChange={(e) => setF({ ...f, ep: digits(e.target.value, 4) })} placeholder="episode, e.g. 12" inputMode="numeric" />
         </label>
         <label style={{ alignSelf: 'end' }}>
           <button className="btn" disabled={busy}>{busy ? 'Adding…' : 'Add player'}</button>
         </label>
       </div>
+      <p className="muted" style={{ fontSize: 13, margin: '10px 0 0' }}>
+        The overall (and episode) are added to his overall rating history as “When signed”. Both are optional.
+      </p>
       {error && <div className="error" style={{ marginTop: 12 }}>{error}</div>}
     </form>
   );
