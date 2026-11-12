@@ -1,10 +1,12 @@
 import Logo from './Logo';
 import SiteChrome from './SiteChrome';
 import { loadSettings, listPublicEditions } from '@/lib/server-data';
-import { creatorInfo, NAV_LINKS as LINKS } from '@/lib/site';
+import { creatorInfo } from '@/lib/site';
+import EditionMenu from './EditionMenu';
 
 // The normal (Leicester City) header and footer.
-export default async function DefaultChrome({ children }) {
+// viewing: 'current' (main site), an edition number (unthemed edition page) or null (archive pages).
+export default async function DefaultChrome({ children, viewing = 'current', extraEdition = null }) {
   let clubName = 'Leicester City';
   let creator = creatorInfo(null);
   try {
@@ -12,14 +14,15 @@ export default async function DefaultChrome({ children }) {
     clubName = settings?.club_name || clubName;
     creator = creatorInfo(settings);
   } catch {}
-  // Show the archive in the menu once an older Youth Edition is public
-  const hasArchive = (await listPublicEditions()).some((e) => e.is_public && !e.is_current);
-  const links = hasArchive ? [...LINKS.slice(0, -2), ['/editions', 'Archive'], ...LINKS.slice(-2)] : undefined;
+  const editions = await listPublicEditions();
+  const current = editions.find((e) => e.is_current);
+  const hasArchive = editions.some((e) => e.is_public && !e.is_current);
+  const brand = { href: '/', name: clubName, sub: `${current?.game || 'FC 27'} · Youth Edition`, logo: <Logo size={34} /> };
 
   return (
     <SiteChrome
-      links={links}
-      brand={{ href: '/', name: clubName, sub: `${creator.name} · Youth Edition`, logo: <Logo size={34} /> }}
+      brand={brand}
+      brandSlot={<EditionMenu brand={brand} active={viewing} extra={extraEdition} />}
       channel={creator.channel}
       footer={{ clubName, creator, game: 'FC27', exportHref: '/api/export', archiveHref: hasArchive ? '/editions' : null }}
     >

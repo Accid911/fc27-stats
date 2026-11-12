@@ -4,19 +4,22 @@ import SiteNav from './SiteNav';
 
 // Header + footer around every page. The main site uses the Leicester look (DefaultChrome);
 // a personalised edition passes its own brand, menu and footer text.
-export default function SiteChrome({ brand, links, channel, footer, children, css }) {
+// brandSlot (optional) replaces the plain brand link, e.g. with the edition switcher.
+export default function SiteChrome({ brand, brandSlot, links, channel, footer, children, css }) {
   return (
     <>
       {css ? <style>{css}</style> : null}
       <header className="site-header">
         <div className="container">
-          <Link href={brand.href} className="brand" aria-label={`${brand.name} Youth Edition – home`}>
-            {brand.logo}
-            <span className="brand-text">
-              {brand.name}
-              <small>{brand.sub}</small>
-            </span>
-          </Link>
+          {brandSlot || (
+            <Link href={brand.href} className="brand" aria-label={`${brand.name} Youth Edition – home`}>
+              {brand.logo}
+              <span className="brand-text">
+                {brand.name}
+                <small>{brand.sub}</small>
+              </span>
+            </Link>
+          )}
           <SiteNav channel={channel} links={links} />
         </div>
       </header>

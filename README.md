@@ -89,7 +89,7 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 
 ## Putting an older edition online
 
-Admin → **Editions** → **Details** on the edition → tick **Public — everyone can see this edition in the archive** → **Save edition**. It appears straight away at `/editions` (the archive) and `/editions/<number>`, and once one older edition is public the main menu gets an **Archive** link and the footer an **Earlier Youth Editions** link. Untick it to hide the edition again; nothing is deleted.
+Admin → **Editions** → **Details** on the edition → tick **Public — everyone can see this edition in the archive** → **Save edition**. It appears straight away at `/editions` (the archive) and `/editions/<number>`, and once one older edition is public the club name top left becomes an **edition switcher** (click it to jump between editions, the archive and all-time stats) and the footer gets an **Earlier Youth Editions** link. Older editions show a strip “You’re viewing … an earlier Youth Edition” with a link back to the current career. The admin isn't in the menu: go to `/admin` yourself. Untick it to hide the edition again; nothing is deleted.
 
 ## Using the admin
 

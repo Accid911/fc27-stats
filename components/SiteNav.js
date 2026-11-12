@@ -21,9 +21,16 @@ export default function SiteNav({ channel, links = LINKS }) {
   }, [open]);
 
   const active = (href, exact) => (exact || href === links[0][0] ? pathname === href : pathname?.startsWith(href));
+  const searchOn = pathname === '/search';
+  const search = (cls) => (
+    <Link href="/search" className={`nav-search ${cls} ${searchOn ? 'active' : ''}`} aria-label="Search players, clubs and episodes" title="Search">
+      <SearchIcon />
+    </Link>
+  );
 
   return (
     <>
+      {search('only-small')}
       <button
         type="button"
         className={`nav-toggle ${open ? 'open' : ''}`}
@@ -32,7 +39,7 @@ export default function SiteNav({ channel, links = LINKS }) {
         onClick={() => setOpen((o) => !o)}
       >
         <span className="burger" aria-hidden="true"><i /><i /><i /></span>
-        {open ? 'Close' : 'Menu'}
+        <span className="nav-toggle-label">{open ? 'Close' : 'Menu'}</span>
       </button>
       <nav id="site-nav" className={`nav ${open ? 'open' : ''}`}>
         {links.map(([href, label, exact]) => (
@@ -40,8 +47,18 @@ export default function SiteNav({ channel, links = LINKS }) {
             {label}
           </Link>
         ))}
+        {search('only-wide')}
         <a className="nav-yt" href={channel} target="_blank" rel="noreferrer">▶ YouTube</a>
       </nav>
     </>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M15.5 15.5 21 21" />
+    </svg>
   );
 }
