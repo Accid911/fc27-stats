@@ -4,16 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-const LINKS = [
-  ['/', 'Overview'],
-  ['/seasons', 'Seasons'],
-  ['/matches', 'Matches'],
-  ['/players', 'Players'],
-  ['/records', 'Records'],
-  ['/search', 'Search'],
-  ['/about', 'About'],
-  ['/admin', 'Admin'],
-];
+import { NAV_LINKS as LINKS } from '@/lib/site';
 
 // Full menu on desktop; a "Menu" button with a drop-down on phones and small screens.
 // links: [href, label, exact?] — the first link (home) always matches exactly.

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook, countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, MOVE_LABEL, fixture, fixtureText, funFacts, allHonours, overallImprovers, squadOverallBySeason } from '@/lib/data';
+import { buildModel, teamRecord, streaks, leagueTable, playerStats, topBy, recordBook, countBy, positionGroup, POSITION_GROUPS, ordinal, seasonLabel, formatMoney, MOVE_LABEL, fixture, fixtureText, funFacts, allHonours, overallImprovers, squadOverallBySeason, subFacts, moreRecords } from '@/lib/data';
 import Leaderboard from '@/components/Leaderboard';
 import DemoNotice from '@/components/DemoNotice';
 import { BarList, ColumnChart } from '@/components/Charts';
@@ -54,7 +54,10 @@ export default function RecordsView({ data, base = '', edition = null }) {
   // Overall rating growth, substitutes and scouting (only shown once something is entered)
   const improvers = overallImprovers(model).map(({ player, sum }) => ({ ...player, growth: sum.growth, from: sum.first.ovr, to: sum.latest.ovr }));
   const ovrBySeason = squadOverallBySeason(model).map((x) => ({ label: `S${x.season.number}`, value: x.avg, players: x.players }));
-  const subsUsed = stats.some((p) => p.subApps > 0);
+  const subs = subFacts(model);
+  const more = moreRecords(model);
+  const minMinutes = 450; // 5 full matches before a per-90 figure counts
+  const timed = stats.some((p) => p.minutes > 0);
   const scouted = countBy(model.scouting, (sc) => sc.country);
 
   return (
@@ -135,6 +138,33 @@ export default function RecordsView({ data, base = '', edition = null }) {
             sub={fun.bestTeamRating ? <>avg rating · <Link href={`${base}/matches/${fun.bestTeamRating.match.id}`}>{fixtureText(fun.bestTeamRating.match, model.clubName.split(' ')[0])}</Link></> : 'Needs 5+ rated players'}
           />
           <Record label="Opponents faced" big={fun.opponentsFaced} sub="different teams" />
+          <Record
+            label="Most appearances in a row"
+            big={more.ironman ? plural(more.ironman.value, 'match') : '—'}
+            sub={more.ironman ? <Link href={`${base}/players/${more.ironman.player.id}`}>{more.ironman.player.name}</Link> : '—'}
+          />
+          <Record
+            label="Favourite victim"
+            big={more.victim ? plural(more.victim.value, 'goal') : '—'}
+            sub={more.victim ? <><Link href={`${base}/players/${more.victim.player.id}`}>{more.victim.player.name}</Link> vs {more.victim.opponent}</> : 'Most goals against one club'}
+          />
+          <Record
+            label="Most assists in a season"
+            big={more.seasonAssists ? more.seasonAssists.value : '—'}
+            sub={more.seasonAssists ? <><Link href={`${base}/players/${more.seasonAssists.player.id}`}>{more.seasonAssists.player.name}</Link> · {seasonLabel(more.seasonAssists.season)}</> : '—'}
+          />
+          <Record
+            label="Best season rating"
+            big={more.seasonRating ? more.seasonRating.value.toFixed(1) : '—'}
+            sub={more.seasonRating ? <><Link href={`${base}/players/${more.seasonRating.player.id}`}>{more.seasonRating.player.name}</Link> · {seasonLabel(more.seasonRating.season)}</> : 'Needs 5+ rated games in a season'}
+          />
+          {more.seasonJump && (
+            <Record
+              label="Biggest overall jump in a season"
+              big={`+${more.seasonJump.value}`}
+              sub={<><Link href={`${base}/players/${more.seasonJump.player.id}`}>{more.seasonJump.player.name}</Link> · {more.seasonJump.from} → {more.seasonJump.to} in {seasonLabel(more.seasonJump.season)}</>}
+            />
+          )}
         </div>
       </section>
 
@@ -173,11 +203,63 @@ export default function RecordsView({ data, base = '', edition = null }) {
           {improvers.length > 0 && (
             <Leaderboard base={base} title="Biggest overall improvers" rows={improvers} valueKey="growth" format={(v) => `+${v}`} sub={(p) => `${p.from} → ${p.to}`} />
           )}
-          {subsUsed && (
-            <Leaderboard base={base} title="Super subs (goals off the bench)" rows={topBy(stats, 'subGoals')} valueKey="subGoals" sub={(p) => `${plural(p.subApps, 'sub appearance')}`} empty="No goals off the bench yet." />
-          )}
         </div>
       </section>
+
+      {subs && (
+        <section className="section">
+          <h2>Substitutes &amp; minutes</h2>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: 16 }}>
+            <Record label="Substitutions" big={subs.ons} sub={`players came on · ${plural(subs.offs, 'player')} came off`} />
+            <Record
+              label="Goals by substitutes"
+              big={subs.subGoals}
+              sub={subs.goals ? `${subs.subGoalPct}% of all goals` : 'No goals yet'}
+            />
+            <Record
+              label="Earliest substitution"
+              big={subs.earliest ? `${subs.earliest.value}′` : '—'}
+              sub={subs.earliest ? <><Link href={`${base}/players/${subs.earliest.player.id}`}>{subs.earliest.player.name}</Link> off vs <Link href={`${base}/matches/${subs.earliest.match.id}`}>{subs.earliest.match.opponent}</Link></> : 'Needs a minute entered'}
+            />
+            <Record
+              label="Most subs in one match"
+              big={subs.mostInMatch ? subs.mostInMatch.value : '—'}
+              sub={subs.mostInMatch ? <Link href={`${base}/matches/${subs.mostInMatch.match.id}`}>{fixtureText(subs.mostInMatch.match, model.clubName.split(' ')[0])}</Link> : 'No one came on yet'}
+            />
+          </div>
+          <div className="grid grid-2">
+            <Leaderboard base={base} title="Most substituted off" rows={topBy(stats, 'subbedOff')} valueKey="subbedOff"
+              sub={(p) => `${plural(p.apps, 'app')}${p.avgOffMinute ? ` · usually off around ${p.avgOffMinute}′` : ''}`} empty="Nobody came off yet." />
+            <Leaderboard base={base} title="Most appearances off the bench" rows={topBy(stats, 'subApps')} valueKey="subApps"
+              sub={(p) => `${plural(p.apps, 'app')} in total`} empty="Nobody came on yet." />
+            <Leaderboard base={base} title="Super subs (goals off the bench)" rows={topBy(stats, 'subGoals')} valueKey="subGoals"
+              sub={(p) => plural(p.subApps, 'sub appearance')} empty="No goals off the bench yet." />
+            <Leaderboard base={base} title="Assists off the bench" rows={topBy(stats, 'subAssists')} valueKey="subAssists"
+              sub={(p) => plural(p.subApps, 'sub appearance')} empty="No assists off the bench yet." />
+            {stats.some((p) => p.subPotm > 0) && (
+              <Leaderboard base={base} title="Player of the Match off the bench" rows={topBy(stats, 'subPotm')} valueKey="subPotm"
+                sub={(p) => plural(p.subApps, 'sub appearance')} />
+            )}
+            {timed && (
+              <Leaderboard base={base} title="Most minutes played" rows={topBy(stats, 'minutes')} valueKey="minutes"
+                format={(v) => `${v.toLocaleString('en-GB')}′`} sub={(p) => `in ${plural(p.timedApps, 'match')}`} />
+            )}
+            {timed && (
+              <Leaderboard base={base} title="Goals per 90 minutes" rows={topBy(stats, 'g90', 5, (p) => p.minutes >= minMinutes)} valueKey="g90"
+                format={(v) => v.toFixed(2)} sub={(p) => `${p.minutes.toLocaleString('en-GB')} minutes`} empty={`Needs ${minMinutes}+ minutes.`} />
+            )}
+            {timed && (
+              <Leaderboard base={base} title="Goals + assists per 90" rows={topBy(stats, 'ga90', 5, (p) => p.minutes >= minMinutes)} valueKey="ga90"
+                format={(v) => v.toFixed(2)} sub={(p) => `${p.minutes.toLocaleString('en-GB')} minutes`} empty={`Needs ${minMinutes}+ minutes.`} />
+            )}
+          </div>
+          {timed && (
+            <p className="muted" style={{ fontSize: 13, marginTop: 12 }}>
+              Minutes count 90 for a full match (extra time not included). Matches where someone came on or off without a minute entered are left out of the minutes.
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="section">
         <h2>By season</h2>

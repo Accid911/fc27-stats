@@ -87,6 +87,10 @@ The publishable/anon key is safe to be public — the database rules (Row Level 
 | `match_players` | Who played in a match: rating, goals, assists, Player of the Match, came on / came off (with the minute) |
 | `trophies` | Extra trophies only — league titles (top of the table) and cup wins (“Winner”) are automatic |
 
+## Putting an older edition online
+
+Admin → **Editions** → **Details** on the edition → tick **Public — everyone can see this edition in the archive** → **Save edition**. It appears straight away at `/editions` (the archive) and `/editions/<number>`, and once one older edition is public the main menu gets an **Archive** link and the footer an **Earlier Youth Editions** link. Untick it to hide the edition again; nothing is deleted.
+
 ## Using the admin
 
 - **Players** — fill in name, position, country, the season he joined (defaults to the latest) and press Enter. Clean sheets are counted automatically for goalkeepers and defenders. Click **Edit / transfer** to change details or to **Sell**, **Loan out**, bring **Back from loan** or **Release** a player (club, fee like `12.5m` or `850k`, season, date). Click **Edit** next to a move in the history to fix it (club, fee, loan length, season, date, notes, or even the kind of move), or ✕ to remove it. When you're signed in, every player page also shows an **✎ Edit player, transfers & loans** button that opens that player here.

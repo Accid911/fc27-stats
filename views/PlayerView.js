@@ -85,6 +85,7 @@ export default function PlayerView({ data, id, base = '', edition = null, fullLo
     ['Win %', all.winPct != null ? `${all.winPct}%` : '—'],
     // only once the starting XI is being entered
     ...(all.subApps > 0 ? [['Came on as a sub', all.subApps]] : []),
+    ...(all.subbedOff > 0 ? [['Substituted off', all.subbedOff]] : []),
     ...(all.subGoals > 0 ? [['Goals as a sub', all.subGoals]] : []),
   ];
 

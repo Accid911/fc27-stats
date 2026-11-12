@@ -42,6 +42,7 @@ export default function SiteChrome({ brand, links, channel, footer, children, cs
             <a href={footer.creator.channel} target="_blank" rel="noreferrer">Watch on YouTube</a>
             <a href={footer.creator.subscribe} target="_blank" rel="noreferrer">Subscribe</a>
             <a href={footer.exportHref} download>⬇ Download all stats (Excel)</a>
+            {footer.archiveHref && <Link href={footer.archiveHref}>Earlier Youth Editions</Link>}
             <Link href="/about">About this site</Link>
           </div>
         </div>
