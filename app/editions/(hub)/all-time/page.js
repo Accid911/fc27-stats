@@ -127,7 +127,7 @@ export default async function AllTimePage() {
           <Board title="Most assists" rows={leaders('assists')} valueKey="assists" />
           <Board title="Most appearances" rows={leaders('apps')} valueKey="apps" />
           <Board title="Player of the Match awards" rows={leaders('potm')} valueKey="potm" />
-          <Board title="Clean sheets (GK & defenders)" rows={leaders('cs')} valueKey="cs" />
+          <Board title="Clean sheets (goalkeepers)" rows={leaders('cs')} valueKey="cs" />
           <Board
             title="Best average rating"
             rows={leaders('avg_rating', 10, (p) => p.rated >= minApps)}

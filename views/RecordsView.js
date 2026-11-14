@@ -185,7 +185,7 @@ export default function RecordsView({ data, base = '', edition = null }) {
           />
           <Leaderboard base={base} title="Most appearances" rows={topBy(stats, 'apps')} valueKey="apps" sub={(p) => p.country || ''} />
           <Leaderboard base={base}
-            title="Clean sheets (GK & defenders)"
+            title="Clean sheets (goalkeepers)"
             rows={topBy(stats, 'cs')}
             valueKey="cs"
             sub={(p) => `${p.apps} apps`}

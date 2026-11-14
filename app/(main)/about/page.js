@@ -54,7 +54,7 @@ export default async function AboutPage() {
       <ul>
         <li>After each match the line-up is entered with every player’s <b>match rating</b>, <b>goals</b>, <b>assists</b> and the <b>Player of the Match</b>, as shown in the game.</li>
         <li>All player totals — appearances, goals, assists, average rating, records — are calculated from those match line-ups.</li>
-        <li><b>Clean sheets</b> count for goalkeepers and defenders who played in a match where nothing was conceded.</li>
+        <li><b>Clean sheets</b> count for goalkeepers only: a keeper who played in a match where nothing was conceded gets one.</li>
         <li>Cup matches decided by a <b>penalty shoot-out</b> count as a win or a loss (shown as e.g. “1–1 (5–4 pens)”).</li>
         <li>League tables are copied from the game at the end of each season (or during it).</li>
         <li><b>Trophies</b> are automatic: a cup marked “Winner”, finishing top of the league or winning the promotion <b>play-offs</b> puts it in the trophy cabinet.</li>
